@@ -20,7 +20,7 @@ export async function remediateCompoundSmiles(docId: string, name: string): Prom
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-pro",
       contents: `Provide the valid, canonical SMILES string for the compound named "${name}". Return ONLY the SMILES string.`,
       config: {
         responseMimeType: "application/json",

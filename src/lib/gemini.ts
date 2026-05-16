@@ -107,11 +107,11 @@ export async function predictInteraction(
 
   let probabilityInstruction = "";
   if (method === "Boltzmann") {
-    probabilityInstruction = "Probability of formation based on Boltzmann distribution at 298K. You MUST also provide the estimated relative formation energy (relativeEnergy) in kcal/mol.";
+    probabilityInstruction = "Probability of formation based on Boltzmann distribution at 298.15K. You MUST also provide the estimated relative formation energy (relativeEnergy) in kcal/mol.";
   } else if (method === "Heuristic") {
     probabilityInstruction = "Probability of formation based on chemical stability principles and heuristic reasoning.";
   } else if (method === "Both") {
-    probabilityInstruction = "Provide BOTH 'probabilityHeuristic' (based on expert reasoning) and 'probabilityBoltzmann' (based on thermodynamic ΔG at 298K). You MUST also provide 'relativeEnergy' in kcal/mol. The main 'probability' field should match 'probabilityBoltzmann' for ranking purposes.";
+    probabilityInstruction = "Provide BOTH 'probabilityHeuristic' (based on expert reasoning) and 'probabilityBoltzmann' (based on thermodynamic ΔG at 298.15K). You MUST also provide 'relativeEnergy' in kcal/mol. The main 'probability' field should match 'probabilityBoltzmann' for ranking purposes.";
   }
 
   const impurityProperties: any = {
@@ -161,13 +161,14 @@ export async function predictInteraction(
 
   try {
     const responseStream = await ai.models.generateContentStream({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-pro",
       contents: `Predict and evaluate the degradation of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
       config: {
+        temperature: 0.1,
         systemInstruction: `You are a professional pharmaceutical degradation evaluator. 
         Your task is to predict the degradation of Compound 1 using the following analytical framework${method === "Both" ? "s" : ""}:
         ${method === "Heuristic" || method === "Both" ? "\n        1. HEURISTIC ANALYSIS: Based on expert chemical reasoning, reactive site identification, and known reaction kinetics." : ""}
-        ${method === "Boltzmann" || method === "Both" ? `\n        ${method === "Both" ? "2." : "1."} BOLTZMANN ANALYSIS: Based on thermodynamic stability and calculated relative formation energy (ΔG) at 298K.` : ""}
+        ${method === "Boltzmann" || method === "Both" ? `\n        ${method === "Both" ? "2." : "1."} BOLTZMANN ANALYSIS: Based on thermodynamic stability and calculated relative formation energy (ΔG) at 298.15K.` : ""}
         
         ${method === "Both" ? "When \"Both\" is selected, you must perform these two analyses independently for each predicted impurity to provide a comparative perspective." : ""}
         
