@@ -1,5 +1,8 @@
 {
   "name": "A-Pi1",
   "description": "AI-powered drug-excipient interaction predictor for pharmaceutical research.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

@@ -507,7 +507,7 @@ export default function App() {
                         {error.type === "SAFETY_TRIGGERED" && <ShieldAlert className="h-5 w-5 text-red-600" />}
                         {error.type === "CONNECTION_ERROR" && <WifiOff className="h-5 w-5 text-red-600" />}
                         {(error.type === "INVALID_SMILES" || error.type === "INVALID_SMARTS" || error.type === "INVALID_JSON") && <AlertCircle className="h-5 w-5 text-red-600" />}
-                        {error.type === "CONFIG_ERROR" && <Lock className="h-5 w-5 text-red-600" />}
+                        {(error.type === "CONFIG_ERROR" || error.type === "PERMISSION_DENIED") && <Lock className="h-5 w-5 text-red-600" />}
                         {error.type === "UNKNOWN_ERROR" && <AlertTriangle className="h-5 w-5 text-red-600" />}
                       </div>
                       <div className="space-y-1">
@@ -518,13 +518,14 @@ export default function App() {
                            error.type === "INVALID_SMILES" || error.type === "INVALID_SMARTS" ? "Structural Format Error" :
                            error.type === "CONNECTION_ERROR" ? "Network Communication Failure" :
                            error.type === "CONFIG_ERROR" ? "Configuration Credential Error" :
+                           error.type === "PERMISSION_DENIED" ? "API Access Permission Denied" :
                            error.type === "INVALID_JSON" ? "Structure Interpretation Failure" :
                            "Analytical Processing Error"}
                         </AlertTitle>
                         <AlertDescription className="text-red-700">
                           {error.message}
                         </AlertDescription>
-                        {(error.type === "QUOTA_EXCEEDED" || error.type === "MODEL_OVERLOADED" || error.type === "CONNECTION_ERROR") && (
+                        {(error.type === "QUOTA_EXCEEDED" || error.type === "MODEL_OVERLOADED" || error.type === "CONNECTION_ERROR" || error.type === "PERMISSION_DENIED" || error.type === "UNKNOWN_ERROR") && (
                           <Button 
                             variant="outline" 
                             size="sm" 

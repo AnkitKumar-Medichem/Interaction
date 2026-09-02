@@ -159,13 +159,22 @@ export async function predictInteraction(
     requiredImpurityFields.push("probabilityHeuristic", "probabilityBoltzmann");
   }
 
-  try {
-    const responseStream = await ai.models.generateContentStream({
-      model: "gemini-2.5-pro",
-      contents: `Predict and evaluate the degradation of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
-      config: {
-        temperature: 0.1,
-        systemInstruction: `You are a professional pharmaceutical degradation evaluator. 
+  const modelsToTry = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"];
+  const maxRetries = 2; // Up to 2 retries per attempt
+  let attempt = 0;
+
+  for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
+    const activeModel = modelsToTry[mIdx];
+    attempt = 0;
+
+    while (attempt <= maxRetries) {
+      try {
+        const responseStream = await ai.models.generateContentStream({
+          model: activeModel,
+          contents: `Predict and evaluate the degradation of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
+          config: {
+            temperature: 0.1,
+            systemInstruction: `You are a professional pharmaceutical degradation evaluator. 
         Your task is to predict the degradation of Compound 1 using the following analytical framework${method === "Both" ? "s" : ""}:
         ${method === "Heuristic" || method === "Both" ? "\n        1. HEURISTIC ANALYSIS: Based on expert chemical reasoning, reactive site identification, and known reaction kinetics." : ""}
         ${method === "Boltzmann" || method === "Both" ? `\n        ${method === "Both" ? "2." : "1."} BOLTZMANN ANALYSIS: Based on thermodynamic stability and calculated relative formation energy (ΔG) at 298.15K.` : ""}
@@ -202,113 +211,161 @@ export async function predictInteraction(
         IMPORTANT: Probabilities MUST be realistic estimates between 0.01 and 0.99. DO NOT return 0.0 unless the impurity is chemically impossible.
         
         Rank the products by their calculated Boltzmann probability (if available) or general probability.`,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            chainOfThought: {
-              type: Type.STRING,
-              description: `Perform your step-by-step chemical reasoning, mechanism formulation${method !== "Heuristic" ? ", and energy estimation" : ""} here BEFORE outputting the final compounds.`
-            },
-            compounds: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { 
-                    type: Type.STRING,
-                    description: "You MUST strictly echo the user's original name exactly as it was provided. Do not convert the starting materials into IUPAC names."
-                  },
-                  smiles: { type: Type.STRING },
-                  features: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  interactionSites: { 
-                    type: Type.ARRAY, 
-                    items: { type: Type.STRING },
-                    description: "Specific chemical sites/groups likely to interact or degrade"
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                chainOfThought: {
+                  type: Type.STRING,
+                  description: `Perform your step-by-step chemical reasoning, mechanism formulation${method !== "Heuristic" ? ", and energy estimation" : ""} here BEFORE outputting the final compounds.`
+                },
+                compounds: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { 
+                        type: Type.STRING,
+                        description: "You MUST strictly echo the user's original name exactly as it was provided. Do not convert the starting materials into IUPAC names."
+                      },
+                      smiles: { type: Type.STRING },
+                      features: { type: Type.ARRAY, items: { type: Type.STRING } },
+                      interactionSites: { 
+                        type: Type.ARRAY, 
+                        items: { type: Type.STRING },
+                        description: "Specific chemical sites/groups likely to interact or degrade"
+                      }
+                    },
+                    required: ["name", "smiles", "features", "interactionSites"]
                   }
                 },
-                required: ["name", "smiles", "features", "interactionSites"]
-              }
-            },
-            interactionType: { type: Type.STRING, enum: ["Physical", "Chemical", "None"] },
-            mechanism: { type: Type.STRING },
-            degradationImpurities: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: impurityProperties,
-                required: requiredImpurityFields
-              }
+                interactionType: { type: Type.STRING, enum: ["Physical", "Chemical", "None"] },
+                mechanism: { type: Type.STRING },
+                degradationImpurities: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: impurityProperties,
+                    required: requiredImpurityFields
+                  }
+                }
+              },
+              required: ["chainOfThought", "compounds", "interactionType", "mechanism", "degradationImpurities"]
             }
-          },
-          required: ["chainOfThought", "compounds", "interactionType", "mechanism", "degradationImpurities"]
-        }
-      }
-    });
+          }
+        });
 
-    let fullText = "";
-    
-    for await (const chunk of responseStream) {
-      if (chunk.text) {
-        fullText += chunk.text;
-        if (onChunk) {
-          try {
-            // Use partial-json to parse the incomplete JSON string
-            const partial = parsePartial(fullText);
-            if (partial) {
-              onChunk(partial as Partial<PredictionResult>);
+        let fullText = "";
+        
+        for await (const chunk of responseStream) {
+          if (chunk.text) {
+            fullText += chunk.text;
+            if (onChunk) {
+              try {
+                // Use partial-json to parse the incomplete JSON string
+                const partial = parsePartial(fullText);
+                if (partial) {
+                  onChunk(partial as Partial<PredictionResult>);
+                }
+              } catch (e) {
+                // Ignore partial parse errors for intermediate chunks
+              }
             }
-          } catch (e) {
-            // Ignore partial parse errors for intermediate chunks
           }
         }
+
+        if (!fullText) {
+          throw new AnalysisError("The model failed to generate a response. Please try again.", "EMPTY_RESPONSE");
+        }
+
+        try {
+          return JSON.parse(fullText);
+        } catch (e) {
+          console.error("JSON Parse Error:", fullText);
+          throw new AnalysisError("The model generated an invalid chemical report. This can happen with very complex structures. Please try again.", "INVALID_JSON");
+        }
+      } catch (error: any) {
+        // If error is AnalysisError we generated, maybe retry if it's transient
+        const isInvalidJson = error instanceof AnalysisError && error.type === "INVALID_JSON";
+        const isEmpty = error instanceof AnalysisError && error.type === "EMPTY_RESPONSE";
+
+        // Check for rate limit (429) or quota errors
+        const isRateLimit = error.message?.includes("quota") || 
+                            error.message?.includes("429") || 
+                            error.status === 429 ||
+                            error.message?.toLowerCase().includes("rate limit") ||
+                            error.message?.includes("RESOURCE_EXHAUSTED");
+
+        const isOverloaded = error.message?.includes("overloaded") || 
+                             error.message?.includes("high demand") ||
+                             error.message?.includes("UNAVAILABLE") ||
+                             error.status === 503;
+
+        const isPermissionDenied = error.message?.toLowerCase().includes("permission") ||
+                                   error.message?.includes("PERMISSION_DENIED") ||
+                                   error.status === 403 ||
+                                   error.message?.includes("403") ||
+                                   error.message?.includes("unregistered callers") ||
+                                   error.message?.includes("not have permission") ||
+                                   error.message?.includes("caller does not have permission");
+
+        // If permission denied or other fatal error on this model and we have another model, try next model
+        if ((isPermissionDenied || isOverloaded) && mIdx < modelsToTry.length - 1) {
+          console.warn(`Model ${activeModel} failed with ${error.message}. Trying next candidate model...`);
+          break; // move to next model in modelsToTry
+        }
+        
+        // If we haven't reached max retries and it's a retryable error
+        if (attempt < maxRetries && (isRateLimit || isOverloaded || isInvalidJson || isEmpty || error.message?.includes("network") || error.message?.includes("fetch"))) {
+          attempt++;
+          const delayMs = attempt * 2500 + Math.random() * 1500;
+          console.warn(`Transient error encountered on ${activeModel} (${error.message}). Retrying in ${Math.round(delayMs/1000)}s (Attempt ${attempt} of ${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue; // Retry the loop
+        }
+
+        // If we've exhausted retries or it's a fatal error and we have more models, try next model
+        if (mIdx < modelsToTry.length - 1 && (isOverloaded || isRateLimit)) {
+          console.warn(`Model ${activeModel} exhausted retries. Trying fallback model...`);
+          break;
+        }
+
+        if (error instanceof AnalysisError && !isRateLimit && !isOverloaded) {
+          throw error;
+        }
+
+        console.error("Gemini API Error:", error);
+        
+        if (error.message?.includes("SAFETY")) {
+          throw new AnalysisError("The input contains content that triggered safety filters. Please check your compound names or structures.", "SAFETY_TRIGGERED");
+        }
+
+        if (isPermissionDenied) {
+          throw new AnalysisError("Gemini API access denied (Permission Denied). Please check that your Gemini API key is valid and has the Generative Language API enabled with unrestricted domain/referrer access.", "PERMISSION_DENIED");
+        }
+
+        if (isRateLimit) {
+          throw new AnalysisError("The daily request quota for the Gemini API has been reached or you are sending requests too quickly. Please wait 60 seconds and try again.", "QUOTA_EXCEEDED");
+        }
+
+        if (error.message?.includes("network") || error.message?.includes("fetch")) {
+          throw new AnalysisError("A network connection issue was detected. Please check your internet connection and verify that the API is reachable.", "CONNECTION_ERROR");
+        }
+        
+        if (isOverloaded) {
+          throw new AnalysisError("The AI engine is currently experiencing high volume and is temporarily overloaded. Please try your request again in a few moments.", "MODEL_OVERLOADED");
+        }
+
+        if (error.message?.includes("API key not valid") || error.message?.includes("API_KEY_INVALID")) {
+          throw new AnalysisError("The configured Gemini API key is invalid or has been revoked. Please verify your credentials in the Settings menu.", "CONFIG_ERROR");
+        }
+
+        // Default error with more context
+        const errorMessage = error.message || "An analytical failure occurred while processing the molecular structures.";
+        throw new AnalysisError(`${errorMessage}`, "UNKNOWN_ERROR");
       }
     }
-
-    if (!fullText) {
-      throw new AnalysisError("The model failed to generate a response. Please try again.", "EMPTY_RESPONSE");
-    }
-
-    try {
-      return JSON.parse(fullText);
-    } catch (e) {
-      console.error("JSON Parse Error:", fullText);
-      throw new AnalysisError("The model generated an invalid chemical report. This can happen with very complex structures. Please try again.", "INVALID_JSON");
-    }
-  } catch (error: any) {
-    if (error instanceof AnalysisError) throw error;
-
-    console.error("Gemini API Error:", error);
-    
-    // Handle specific Gemini error cases
-    if (error.message?.includes("SAFETY")) {
-      throw new AnalysisError("The input contains content that triggered safety filters. Please check your compound names or structures.", "SAFETY_TRIGGERED");
-    }
-
-    // Check for rate limit (429) or quota errors
-    const isRateLimit = error.message?.includes("quota") || 
-                        error.message?.includes("429") || 
-                        error.status === 429 ||
-                        error.message?.toLowerCase().includes("rate limit");
-
-    if (isRateLimit) {
-      throw new AnalysisError("The daily request quota for the Gemini API has been reached or you are sending requests too quickly. Please wait 60 seconds and try again.", "QUOTA_EXCEEDED");
-    }
-
-    if (error.message?.includes("network") || error.message?.includes("fetch")) {
-      throw new AnalysisError("A network connection issue was detected. Please check your internet connection and verify that the API is reachable.", "CONNECTION_ERROR");
-    }
-    
-    if (error.message?.includes("overloaded") || error.status === 503) {
-      throw new AnalysisError("The AI engine is currently experiencing high volume and is temporarily overloaded. Please try your request again in a few moments.", "MODEL_OVERLOADED");
-    }
-
-    if (error.message?.includes("API key not valid")) {
-      throw new AnalysisError("The configured Gemini API key is invalid or has been revoked. Please verify your credentials in the Settings menu.", "CONFIG_ERROR");
-    }
-
-    // Default error with more context
-    const errorMessage = error.message || "An analytical failure occurred while processing the molecular structures.";
-    throw new AnalysisError(`${errorMessage}`, "UNKNOWN_ERROR");
   }
+
+  throw new AnalysisError("Failed after trying available AI models. Please try again in a few moments.", "UNKNOWN_ERROR");
 }
