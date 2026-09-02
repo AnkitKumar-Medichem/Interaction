@@ -2,11 +2,26 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { updateCompoundSmiles } from './firestore-utils';
 
 const getApiKey = () => {
+  if (typeof window !== "undefined") {
+    const win = window as any;
+    if (win.__GEMINI_API_KEY__ && win.__GEMINI_API_KEY__ !== "MISSING_KEY") {
+      return win.__GEMINI_API_KEY__;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const urlKey = params.get("gemini_key") || params.get("api_key");
+    if (urlKey) return urlKey;
+    try {
+      const storedKey = localStorage.getItem("GEMINI_API_KEY");
+      if (storedKey && storedKey !== "MISSING_KEY") return storedKey;
+    } catch (_) {}
+  }
   const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   return key && key !== "MISSING_KEY" ? key : null;
 };
 
-const ai = new GoogleGenAI({ apiKey: getApiKey() || "" });
+const getAiClient = () => {
+  return new GoogleGenAI({ apiKey: getApiKey() || "" });
+};
 
 /**
  * Dynamically resolves a missing SMILES string using Gemini and updates the Firestore database.
@@ -23,6 +38,7 @@ export async function remediateCompoundSmiles(docId: string, name: string): Prom
 
   while (attempt <= maxRetries) {
     try {
+      const ai = getAiClient();
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite",
         contents: `Provide the valid, canonical SMILES string for the compound named "${name}". Return ONLY the SMILES string.`,

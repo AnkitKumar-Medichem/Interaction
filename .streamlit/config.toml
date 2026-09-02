@@ -1,6 +1,7 @@
 [server]
 headless = true
 enableCORS = false
+enableStaticServing = true
 port = 8501
 
 [theme]

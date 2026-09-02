@@ -14,10 +14,10 @@ This repository is configured for immediate deployment on **[Streamlit Community
 
 ### Step 1: Push or Fork this Repository
 Ensure your repository contains:
-- `app.py` (Streamlit application entry point)
+- `app.py` (Streamlit application entry point serving the exact GUI)
+- `static/` (Pre-compiled production assets for instant deployment with the identical GUI)
 - `requirements.txt` (Python dependencies)
-- `packages.txt` (Debian system dependencies for RDKit)
-- `.streamlit/config.toml` (Streamlit visual theme and server configuration)
+- `.streamlit/config.toml` (Streamlit configuration with `enableStaticServing = true`)
 
 ### Step 2: Create App on Streamlit Cloud
 1. Sign in to [share.streamlit.io](https://share.streamlit.io/) with your GitHub account.

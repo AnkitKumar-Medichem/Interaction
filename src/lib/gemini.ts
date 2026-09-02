@@ -3,21 +3,40 @@ import { parse as parsePartial } from 'partial-json';
 import { validateSmiles, validateSmarts, MolecularDescriptors } from "./rdkit";
 
 const getApiKey = () => {
-  // Try both standard and VITE_ prefixed variables
+  // Check runtime globals, URL query parameters, and local storage first
+  if (typeof window !== "undefined") {
+    const win = window as any;
+    if (win.__GEMINI_API_KEY__ && win.__GEMINI_API_KEY__ !== "MISSING_KEY") {
+      return win.__GEMINI_API_KEY__;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const urlKey = params.get("gemini_key") || params.get("api_key");
+    if (urlKey) {
+      try {
+        localStorage.setItem("GEMINI_API_KEY", urlKey);
+      } catch (_) {}
+      return urlKey;
+    }
+    try {
+      const storedKey = localStorage.getItem("GEMINI_API_KEY");
+      if (storedKey && storedKey !== "MISSING_KEY") {
+        return storedKey;
+      }
+    } catch (_) {}
+  }
+
+  // Try both standard and VITE_ prefixed environment variables
   const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   
   if (!key || key === "INVALID_OR_MISSING_KEY") {
-    if (typeof window !== "undefined") {
-      console.error("❌ GEMINI_API_KEY is missing.");
-      console.log("1. AI Studio: Click the gear icon (Settings) -> Secrets -> Add GEMINI_API_KEY.");
-      console.log("2. Vercel: Add VITE_GEMINI_API_KEY to your Project Settings and redeploy.");
-    }
     return "MISSING_KEY";
   }
   return key;
 };
 
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
+const getAiClient = () => {
+  return new GoogleGenAI({ apiKey: getApiKey() });
+};
 
 export interface CompoundInfo {
   name: string;
@@ -169,6 +188,7 @@ export async function predictInteraction(
 
     while (attempt <= maxRetries) {
       try {
+        const ai = getAiClient();
         const responseStream = await ai.models.generateContentStream({
           model: activeModel,
           contents: `Predict and evaluate the degradation of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
