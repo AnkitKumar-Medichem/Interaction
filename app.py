@@ -1,10 +1,11 @@
 """
-A-Pi1: AI-Powered Drug-Excipient Interaction & Degradation Predictor
-Streamlit Application (Python Implementation)
+Interaction: AI-Powered Chemical Interaction & Reaction Predictor
+Streamlit Application (High-Fidelity Chemical Reaction & Byproduct Engine)
 
-A pharmaceutical formulation stability engine that predicts degradation 
-pathways and incompatibilities using Heuristic Kinetic Reasoning and 
-Boltzmann Thermodynamic Distribution (ΔG at 298.15 K).
+A chemistry engine that predicts reaction pathways,
+chemical incompatibilities, and byproducts using
+Heuristic Kinetic Reasoning and Boltzmann Thermodynamic
+Distribution (ΔG at 298.15 K).
 """
 
 import os
@@ -20,44 +21,422 @@ import streamlit as st
 import pandas as pd
 
 # ==============================================================================
-# 1. Streamlit Page Configuration
+# 1. Streamlit Page Configuration & Modern Styling
 # ==============================================================================
 st.set_page_config(
-    page_title="A-Pi1 | Drug-Excipient Degradation Predictor",
-    page_icon="💊",
+    page_title="INTERACTION | Chemical Interaction & Byproduct Predictor",
+    page_icon="🧪",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
+# Custom High-End Chemistry CSS that cleanly targets Streamlit's native DOM
+CUSTOM_CSS = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+    /* Global Typography & Font Family */
+    html, body, [class*="css"], [class*="st-"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #0F172A;
+    }
+    
+    /* Clean Main Canvas Spacing */
+    .block-container {
+        padding-top: 1.25rem !important;
+        padding-bottom: 3.5rem !important;
+        max-width: 1120px !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Hide Default Clutter */
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 0px !important;
+    }
+    div[data-testid="stToolbar"] { visibility: hidden; }
+
+    /* Streamlit Native Border Wrappers (st.container(border=True)) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        padding: 1.5rem 1.75rem !important;
+        margin-bottom: 1.5rem !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #CBD5E1 !important;
+    }
+
+    /* Primary & Secondary Action Buttons */
+    div.stButton > button {
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1.25rem !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    div.stButton > button[kind="primary"] {
+        background-color: #4F46E5 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #4F46E5 !important;
+        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2) !important;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #4338CA !important;
+        border-color: #4338CA !important;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+        transform: translateY(-1px);
+    }
+    div.stButton > button[kind="secondary"] {
+        background-color: #FFFFFF !important;
+        color: #334155 !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        background-color: #F8FAFC !important;
+        border-color: #94A3B8 !important;
+        color: #0F172A !important;
+    }
+
+    /* Download Button */
+    div.stDownloadButton > button {
+        background-color: #0F172A !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1.25rem !important;
+        border: none !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    div.stDownloadButton > button:hover {
+        background-color: #1E293B !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Input Fields and Selects */
+    div[data-baseweb="input"] {
+        border-radius: 8px !important;
+        border-color: #E2E8F0 !important;
+        background-color: #FFFFFF !important;
+    }
+    div[data-baseweb="input"]:focus-within {
+        border-color: #4F46E5 !important;
+        box-shadow: 0 0 0 1px #4F46E5 !important;
+    }
+    div[data-baseweb="select"] > div {
+        border-radius: 8px !important;
+        border-color: #E2E8F0 !important;
+    }
+
+    /* Streamlit Metrics */
+    div[data-testid="stMetric"] {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+    }
+    div[data-testid="stMetricLabel"] > div {
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: #64748B !important;
+    }
+    div[data-testid="stMetricValue"] > div {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 800 !important;
+        color: #0F172A !important;
+    }
+
+    /* Radio / Segmented Button Styling */
+    div[data-testid="stRadio"] > div {
+        gap: 0.5rem;
+    }
+
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 0.25rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: #64748B;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #4F46E5 !important;
+        background-color: #EEF2FF !important;
+    }
+
+    /* Custom Unbreakable HTML Chemical Cards */
+    .ap1-comp-card {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: row;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        transition: all 0.15s ease;
+    }
+    .ap1-comp-card:hover {
+        border-color: #818CF8;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.06);
+    }
+    .ap1-comp-mol {
+        width: 220px;
+        min-width: 220px;
+        background: #F8FAFC;
+        border-right: 1px solid #F1F5F9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        position: relative;
+    }
+    .ap1-comp-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: #EEF2FF;
+        color: #4F46E5;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.2rem 0.55rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .ap1-comp-info {
+        padding: 1.25rem 1.5rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .ap1-comp-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #0F172A;
+        line-height: 1.2;
+    }
+    .ap1-comp-role {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.2rem 0.55rem;
+        border-radius: 4px;
+        margin-left: 0.5rem;
+    }
+    .role-primary {
+        background: #EEF2FF;
+        color: #4338CA;
+    }
+    .role-secondary {
+        background: #F1F5F9;
+        color: #475569;
+    }
+    .ap1-smiles-box {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        color: #64748B;
+        background: #F8FAFC;
+        border: 1px solid #F1F5F9;
+        padding: 0.35rem 0.65rem;
+        border-radius: 6px;
+        margin: 0.5rem 0 0.75rem 0;
+        word-break: break-all;
+    }
+    .ap1-tag-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.25rem;
+    }
+    .ap1-pill {
+        font-size: 0.68rem;
+        font-weight: 500;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        border: 1px solid #E2E8F0;
+        background: #FFFFFF;
+        color: #475569;
+    }
+    .ap1-pill.mw {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        background: #F1F5F9;
+        color: #334155;
+        border-color: #E2E8F0;
+    }
+    .ap1-pill.site {
+        background: #F5F7FF;
+        border-color: #E0E7FF;
+        color: #4338CA;
+        font-weight: 600;
+    }
+
+    /* Impurity Card Presentation */
+    .ap1-imp-card {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: row;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ap1-imp-card:hover {
+        border-color: #818CF8;
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.08);
+    }
+    .ap1-imp-svg {
+        width: 250px;
+        min-width: 250px;
+        background: #FFFFFF;
+        border-right: 1px solid #F1F5F9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        position: relative;
+    }
+    .ap1-imp-body {
+        padding: 1.5rem 1.75rem;
+        flex: 1;
+    }
+    .ap1-imp-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .ap1-imp-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0F172A;
+        line-height: 1.25;
+    }
+    .ap1-imp-prob-val {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #4F46E5;
+        text-align: right;
+        line-height: 1;
+    }
+    .ap1-imp-prob-sub {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #94A3B8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: right;
+        margin-top: 0.25rem;
+    }
+    .ap1-prob-bar-bg {
+        width: 100%;
+        height: 6px;
+        background: #EEF2FF;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin: 0.65rem 0 1rem 0;
+    }
+    .ap1-prob-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6366F1, #4F46E5);
+        border-radius: 9999px;
+    }
+    .ap1-imp-desc {
+        font-size: 0.88rem;
+        color: #475569;
+        line-height: 1.55;
+        margin-bottom: 0.85rem;
+    }
+    .ap1-mech-box {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        padding: 0.85rem 1rem;
+        font-size: 0.82rem;
+        color: #334155;
+        line-height: 1.55;
+        margin-bottom: 1rem;
+    }
+    .ap1-mech-title {
+        font-weight: 700;
+        color: #0F172A;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.25rem;
+    }
+    .ap1-badge-cond {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+    }
+    .cond-hydro { background: #FEF3C7; color: #B45309; }
+    .cond-oxid { background: #FEE2E2; color: #B91C1C; }
+    .cond-therm { background: #FFEDD5; color: #C2410C; }
+    .cond-photo { background: #E0E7FF; color: #3730A3; }
+    .cond-react { background: #F3E8FF; color: #6B21A8; }
+</style>
+"""
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+
 # ==============================================================================
-# 2. Curated Pharmaceutical Compound Knowledge Base
+# 2. Knowledge Base & Curated Presets
 # ==============================================================================
 PRESET_COMPOUNDS: Dict[str, Dict[str, Any]] = {
     "Aspirin": {
-        "name": "Aspirin",
+        "name": "Aspirin (Acetylsalicylic Acid)",
         "smiles": "CC(=O)Oc1ccccc1C(=O)O",
         "type": "API",
         "category": "Analgesics & NSAIDs",
-        "features": ["Carboxylic acid", "Ester", "Aromatic ring"],
-        "interactionSites": ["Ester carbonyl (hydrolysis prone)", "Aromatic ring"],
+        "features": ["Carboxylic acid", "Phenolic ester", "Ortho-substituted aromatic ring"],
+        "interactionSites": ["Ester carbonyl (hydrolysis prone)", "Anhydride dimerization center"],
         "mw": 180.16,
     },
     "Paracetamol": {
         "name": "Acetaminophen (Paracetamol)",
         "smiles": "CC(=O)Nc1ccc(O)cc1",
         "type": "API",
-        "category": "Analgesics & NSAIDs",
-        "features": ["Secondary amide", "Phenolic hydroxyl", "Aromatic ring"],
-        "interactionSites": ["Phenolic OH (oxidation prone)", "Amide linkage"],
+        "category": "Analgesics & Antipyretics",
+        "features": ["Secondary acetamide", "Phenolic hydroxyl", "Para-substituted aromatic ring"],
+        "interactionSites": ["Phenolic OH (oxidation/quinone prone)", "Amide linkage (hydrolysis)"],
         "mw": 151.16,
     },
     "Ibuprofen": {
         "name": "Ibuprofen",
         "smiles": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
         "type": "API",
-        "category": "Analgesics & NSAIDs",
-        "features": ["Carboxylic acid", "Isobutyl group", "Aromatic ring"],
-        "interactionSites": ["Carboxylic acid moiety", "Benzylic CH"],
+        "category": "NSAIDs",
+        "features": ["Propionic acid core", "Isobutyl group", "Aromatic ring"],
+        "interactionSites": ["Carboxylic acid (esterification/transesterification with PEG)"],
         "mw": 206.28,
     },
     "Ciprofloxacin": {
@@ -65,56 +444,99 @@ PRESET_COMPOUNDS: Dict[str, Dict[str, Any]] = {
         "smiles": "C1CC1n2cc(C(=O)O)c(=O)c3cc(F)c(N4CCNCC4)cc23",
         "type": "API",
         "category": "Fluoroquinolones",
-        "features": ["Carboxylic acid", "Keto group", "Piperazine ring", "Fluorine"],
-        "interactionSites": ["Piperazine secondary amine (chelation)", "4-quinolone beta-dicarbonyl"],
+        "features": ["4-Quinolone core", "Beta-dicarbonyl system", "Piperazine secondary amine", "Aromatic fluorine"],
+        "interactionSites": ["4-quinolone beta-dicarbonyl (divalent cation chelation)", "Piperazine NH (oxidation/formylation)"],
         "mw": 331.34,
     },
     "Metformin": {
         "name": "Metformin",
         "smiles": "CN(C)C(=N)NC(=N)N",
-        "type": "API",
-        "category": "Endocrine & Metabolic",
-        "features": ["Biguanide core", "Secondary & primary amines"],
-        "interactionSites": ["Nucleophilic biguanide nitrogens (Maillard prone)"],
+        "type": "Primary",
+        "category": "Organic Base",
+        "features": ["Biguanide core", "Nucleophilic terminal amines"],
+        "interactionSites": ["Nucleophilic biguanide amines (reaction with carbonyl / aldose sugars)"],
         "mw": 129.16,
     },
     "Lactose": {
         "name": "Lactose (Monohydrate)",
         "smiles": "C(C1C(C(C(C(O1)OC2C(OC(C(C2O)O)O)CO)O)O)O)O",
-        "type": "Excipient",
-        "category": "Reducing Sugar Filler",
+        "type": "Secondary",
+        "category": "Reducing Sugar",
         "features": ["Reducing aldose disaccharide", "Hemiacetal / aldehyde equilibrium"],
-        "interactionSites": ["Anomeric carbon / open-chain aldehyde (Maillard interaction)"],
+        "interactionSites": ["Anomeric carbon / open-chain aldehyde (reaction with primary/secondary amines)"],
         "mw": 342.30,
     },
     "Magnesium Stearate": {
         "name": "Magnesium Stearate",
         "smiles": "[Mg+2].[O-]C(=O)CCCCCCCCCCCCCCCCC.[O-]C(=O)CCCCCCCCCCCCCCCCC",
-        "type": "Excipient",
-        "category": "Hydrophobic Lubricant",
-        "features": ["Divalent magnesium ion", "Long-chain stearate anions"],
-        "interactionSites": ["Mg2+ Lewis acid center", "Alkaline trace impurities"],
+        "type": "Secondary",
+        "category": "Organic Salt / Lubricant",
+        "features": ["Divalent magnesium ion (Lewis acid)", "Aliphatic stearate anions", "Alkaline trace impurities"],
+        "interactionSites": ["Mg2+ Lewis acid center", "Alkaline microenvironmental shifts (accelerates ester cleavage)"],
         "mw": 591.24,
     },
     "Povidone K-30": {
         "name": "Povidone (PVP K-30)",
         "smiles": "C1CCN(C1=O)C=C",
-        "type": "Excipient",
-        "category": "Binder & Dispersant",
+        "type": "Secondary",
+        "category": "Polymeric Additive",
         "features": ["Polyvinylpyrrolidone polymer", "Tertiary lactam ring", "Peroxide trace residuals"],
-        "interactionSites": ["Trace organic peroxides (catalyzes oxidation)"],
+        "interactionSites": ["Trace organic peroxides (catalyzes radical oxidation of phenolic/amine groups)"],
         "mw": 111.14,
+    },
+    "Citric Acid": {
+        "name": "Citric Acid",
+        "smiles": "C(C(=O)O)C(CC(=O)O)(C(=O)O)O",
+        "type": "Secondary",
+        "category": "Acidulant & Chelating Agent",
+        "features": ["Tricarboxylic acid", "Alpha-hydroxy acid"],
+        "interactionSites": ["Proton donor (acid microenvironment)", "Carboxylic esterification"],
+        "mw": 192.12,
+    },
+    "PEG 4000": {
+        "name": "Polyethylene Glycol 4000",
+        "smiles": "OCCOCCOCCO",
+        "type": "Secondary",
+        "category": "Hydrophilic Polymer",
+        "features": ["Polyether backbone", "Primary terminal hydroxyls"],
+        "interactionSites": ["Terminal hydroxyls (transesterification with carboxylic acids)"],
+        "mw": 150.17,
     },
 }
 
+REACTION_PRESETS = {
+    "Aspirin + Magnesium Stearate": {
+        "primary": {"value": "Aspirin", "type": "Name"},
+        "secondaries": [{"value": "Magnesium Stearate", "type": "Name"}],
+        "desc": "Base-catalyzed hydrolysis: alkaline Mg2+ microenvironment accelerates ester cleavage into Salicylic Acid.",
+    },
+    "Metformin + Lactose": {
+        "primary": {"value": "Metformin", "type": "Name"},
+        "secondaries": [{"value": "Lactose", "type": "Name"}],
+        "desc": "Maillard condensation reaction: nucleophilic biguanide primary/secondary amines react with reducing aldose open-chain form.",
+    },
+    "Ciprofloxacin + Magnesium Stearate": {
+        "primary": {"value": "Ciprofloxacin", "type": "Name"},
+        "secondaries": [{"value": "Magnesium Stearate", "type": "Name"}],
+        "desc": "Chelation interaction: beta-dicarbonyl center forms coordination complexes with divalent Mg2+.",
+    },
+    "Aspirin (Intrinsic Degradation)": {
+        "primary": {"value": "Aspirin", "type": "Name"},
+        "secondaries": [],
+        "desc": "Intrinsic chemical decomposition pathways: acid/base hydrolysis, thermal ester dimerization, and anhydride coupling.",
+    },
+}
+
+
 # ==============================================================================
-# 3. RDKit Molecular Structure & SVG Generator
+# 3. Chemical Vector SVG Generator & Descriptors
 # ==============================================================================
-def get_mol_svg(smiles: str, width: int = 220, height: int = 220) -> str:
-    """Renders high-definition, transparent vector SVGs using RDKit."""
+@st.cache_data(show_spinner=False)
+def get_mol_svg(smiles: str, width: int = 240, height: int = 240) -> str:
+    """Generates crisp transparent vector SVG molecules using RDKit or fallback."""
     if not smiles or not smiles.strip():
         return _fallback_mol_svg(width, height)
-    
+
     clean_smiles = smiles.strip()
     try:
         from rdkit import Chem
@@ -140,28 +562,29 @@ def get_mol_svg(smiles: str, width: int = 220, height: int = 220) -> str:
     return _fallback_mol_svg(width, height, label=clean_smiles[:14])
 
 
-def _fallback_mol_svg(width: int = 220, height: int = 220, label: str = "Molecule") -> str:
-    """Generates a clean vector chemical hexagon glyph when RDKit is not loaded."""
+def _fallback_mol_svg(width: int = 240, height: int = 240, label: str = "Molecule") -> str:
+    """Provides a vector chemical glyph when RDKit is not installed or smiles is complex."""
     return f"""
-    <svg width="{width}" height="{height}" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;">
-        <rect width="200" height="200" rx="12" fill="#F8FAFC" />
-        <!-- Hexagon aromatic core -->
-        <polygon points="100,50 145,76 145,128 100,154 55,128 55,76" stroke="#4F46E5" stroke-width="3" fill="none" stroke-linejoin="round"/>
-        <polygon points="100,64 133,83 133,121 100,140 67,121 67,83" stroke="#818CF8" stroke-width="1.5" fill="#EEF2FF" stroke-dasharray="4 3"/>
-        <!-- Functional bond arms -->
-        <line x1="145" y1="76" x2="175" y2="58" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="175" cy="58" r="4" fill="#EF4444" />
-        <line x1="145" y1="128" x2="175" y2="146" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="175" cy="146" r="4" fill="#3B82F6" />
-        <line x1="55" y1="128" x2="25" y2="146" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="25" cy="146" r="4" fill="#10B981" />
-        <line x1="100" y1="50" x2="100" y2="22" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="100" cy="22" r="4" fill="#F59E0B" />
-        <text x="100" y="182" font-family="'JetBrains Mono', monospace" font-size="9" fill="#94A3B8" text-anchor="middle">{label}</text>
+    <svg width="{width}" height="{height}" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;">
+        <rect width="220" height="220" rx="12" fill="#F8FAFC" />
+        <!-- Aromatic Core -->
+        <polygon points="110,60 155,86 155,138 110,164 65,138 65,86" stroke="#4F46E5" stroke-width="3" fill="none" stroke-linejoin="round"/>
+        <polygon points="110,74 143,93 143,131 110,150 77,131 77,93" stroke="#818CF8" stroke-width="1.5" fill="#EEF2FF" stroke-dasharray="4 3"/>
+        <!-- Reactive Branches -->
+        <line x1="155" y1="86" x2="188" y2="68" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="188" cy="68" r="4.5" fill="#EF4444" />
+        <line x1="155" y1="138" x2="188" y2="156" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="188" cy="156" r="4.5" fill="#3B82F6" />
+        <line x1="65" y1="138" x2="32" y2="156" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="32" cy="156" r="4.5" fill="#10B981" />
+        <line x1="110" y1="60" x2="110" y2="30" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="110" cy="30" r="4.5" fill="#F59E0B" />
+        <text x="110" y="195" font-family="'JetBrains Mono', monospace" font-size="9" fill="#94A3B8" text-anchor="middle">{label}</text>
     </svg>
     """
 
 
+@st.cache_data(show_spinner=False)
 def get_mol_descriptors(smiles: str) -> Dict[str, Any]:
     """Calculates molecular properties (MW, LogP, TPSA) using RDKit."""
     res = {"MolWt": 0.0, "MolLogP": 0.0, "TPSA": 0.0}
@@ -180,12 +603,12 @@ def get_mol_descriptors(smiles: str) -> Dict[str, Any]:
     except Exception:
         pass
 
-    # Fallback knowledge base lookup
+    # Knowledge base fallback
     for comp in PRESET_COMPOUNDS.values():
         if comp["smiles"].lower() == smiles.lower():
-            return {"MolWt": comp["mw"], "MolLogP": 1.5, "TPSA": 50.0}
+            return {"MolWt": comp["mw"], "MolLogP": 1.45, "TPSA": 55.0}
 
-    return {"MolWt": 180.2, "MolLogP": 1.4, "TPSA": 45.0}
+    return {"MolWt": 180.2, "MolLogP": 1.35, "TPSA": 48.0}
 
 
 def compute_relative_energy(smiles: str) -> Optional[float]:
@@ -209,148 +632,305 @@ def compute_relative_energy(smiles: str) -> Optional[float]:
 
 
 # ==============================================================================
-# 4. Realistic Fallback & Chemical Rule Simulator
+# 4. Realistic Chemical Degradation Simulation Rules
 # ==============================================================================
 def get_realistic_prediction(
     primary: Dict[str, str], secondaries: List[Dict[str, str]], method: str
 ) -> Dict[str, Any]:
-    """Generates rigorous pharmaceutical degradation predictions when API is offline."""
+    """Provides rigorous reaction and degradation products based on established chemical pathways."""
     p_name = primary.get("value", "").strip() or "Aspirin"
     sec_names = [s.get("value", "").strip() for s in secondaries if s.get("value", "").strip()]
+    p_lower = p_name.lower()
 
-    # Check for Aspirin
-    if "aspirin" in p_name.lower() or "acetylsalicylic" in p_name.lower() or "CC(=O)Oc1" in p_name:
+    # 1. Aspirin (Acetylsalicylic Acid)
+    if "aspirin" in p_lower or "acetylsalicylic" in p_lower or "CC(=O)Oc1" in p_name:
+        is_basic_additive = any("stearate" in s.lower() or "magnesium" in s.lower() for s in sec_names)
+        is_peg = any("peg" in s.lower() or "polyethylene" in s.lower() for s in sec_names)
+
+        impurities = [
+            {
+                "iupacName": "Salicylic Acid (Hydrolysis Product)",
+                "smiles": "Oc1ccccc1C(=O)O",
+                "structureDescription": "Cleaved ortho-hydroxybenzoic acid formed by hydrolysis of the acetyl ester linkage.",
+                "origin": "Aspirin",
+                "probability": 0.94 if is_basic_additive else 0.86,
+                "probabilityHeuristic": 0.92,
+                "probabilityBoltzmann": 0.88,
+                "relativeEnergy": -4.20,
+                "condition": "Acidic / Basic Hydrolysis",
+                "source": "Additive Interaction" if is_basic_additive else "Direct Degradation",
+                "mechanismExplanation": (
+                    "Neighboring group carboxyl-assisted intramolecular nucleophilic catalysis accelerates "
+                    "hydrolysis of the acetyl ester. In presence of alkaline additives like Magnesium Stearate, "
+                    "elevated microenvironmental pH catalyzes rapid ester solvolysis."
+                ),
+                "molecularDescriptors": {"MolWt": 138.12, "MolLogP": 2.26, "TPSA": 57.53},
+            },
+            {
+                "iupacName": "Acetylsalicylsalicylic Acid (Condensation Dimer)",
+                "smiles": "CC(=O)Oc1ccccc1C(=O)Oc2ccccc2C(=O)O",
+                "structureDescription": "Bimolecular condensation ester dimer formed under elevated temperature in the solid state.",
+                "origin": "Aspirin",
+                "probability": 0.45,
+                "probabilityHeuristic": 0.48,
+                "probabilityBoltzmann": 0.40,
+                "relativeEnergy": 2.15,
+                "condition": "Thermal Degradation",
+                "source": "Direct Degradation",
+                "mechanismExplanation": "Intermolecular transesterification between two acetylsalicylic acid molecules releasing acetic acid.",
+                "molecularDescriptors": {"MolWt": 300.26, "MolLogP": 3.42, "TPSA": 89.90},
+            },
+            {
+                "iupacName": "Acetylsalicylic Anhydride",
+                "smiles": "CC(=O)Oc1ccccc1C(=O)OC(=O)c2ccccc2OC(=O)C",
+                "structureDescription": "Diacyl anhydride formed by thermal dehydration coupling of adjacent carboxylic acid groups.",
+                "origin": "Aspirin",
+                "probability": 0.32,
+                "probabilityHeuristic": 0.35,
+                "probabilityBoltzmann": 0.28,
+                "relativeEnergy": 5.40,
+                "condition": "Thermal Degradation",
+                "source": "Direct Degradation",
+                "mechanismExplanation": "Bimolecular dehydration of two carboxyl groups under elevated dry heat conditions.",
+                "molecularDescriptors": {"MolWt": 342.30, "MolLogP": 3.65, "TPSA": 99.13},
+            },
+        ]
+
+        if is_peg:
+            impurities.insert(1, {
+                "iupacName": "Acetylsalicylic Acid-PEG Ester Adduct",
+                "smiles": "CC(=O)Oc1ccccc1C(=O)OCCOCCO",
+                "structureDescription": "Transesterification polymeric conjugate formed with terminal hydroxyl groups of PEG.",
+                "origin": "Aspirin + PEG",
+                "probability": 0.58,
+                "probabilityHeuristic": 0.62,
+                "probabilityBoltzmann": 0.54,
+                "relativeEnergy": -1.10,
+                "condition": "Chemical Incompatibility",
+                "source": "Interaction with other compound",
+                "mechanismExplanation": "Nucleophilic attack of PEG terminal primary alcohol onto the acetylsalicylate carboxyl carbon.",
+                "molecularDescriptors": {"MolWt": 268.26, "MolLogP": 0.85, "TPSA": 84.06},
+            })
+
         return {
             "chainOfThought": (
-                "Aspirin (Acetylsalicylic Acid) contains an ortho-substituted phenolic ester linkage adjacent to a "
-                "carboxylic acid group. The proximal carboxylic acid engages in intramolecular general acid/base catalysis, "
-                "substantially accelerating ester hydrolysis into Salicylic Acid and Acetic Acid under moisture or humidity.\n\n"
-                "Under thermal stress (elevated temperatures in solid state), bimolecular transesterification yields "
-                "Acetylsalicylic Anhydride and polymeric salicylates. In the presence of excipients like Magnesium Stearate, "
-                "alkaline microenvironmental shifts accelerate ester cleavage. With basic primary or secondary amines, "
-                "transacetylation readily generates Salicylamide derivatives."
+                "1. Functional Group Assessment: Aspirin possesses an ortho-substituted ester and carboxylic acid moiety.\n"
+                "2. Reactive Pathway 1 (Hydrolysis): The adjacent carboxylic acid provides anchimeric assistance, accelerating ester cleavage into Salicylic Acid and Acetic Acid.\n"
+                "3. Reaction Influence: The addition of basic additives like Magnesium Stearate shifts the microenvironmental surface pH higher, destabilizing the ester.\n"
+                "4. Thermal Condensation: Under elevated solid-state temperatures (thermal stress), intermolecular transesterification generates Acetylsalicylsalicylic acid and symmetrical anhydrides."
             ),
             "compounds": [
                 {
                     "name": "Aspirin",
                     "smiles": "CC(=O)Oc1ccccc1C(=O)O",
                     "features": ["Carboxylic acid", "Ester", "Aromatic ring"],
-                    "interactionSites": ["Ester carbonyl (hydrolysis prone)", "Aromatic ring"],
-                    "molecularDescriptors": {"MolWt": 180.16, "MolLogP": 1.19, "TPSA": 63.6},
+                    "interactionSites": ["Ester carbonyl (hydrolysis prone)", "Anhydride dimerization center"],
+                    "molecularDescriptors": {"MolWt": 180.16, "MolLogP": 1.19, "TPSA": 63.60},
                 }
             ] + [
                 {
-                    "name": s_name,
-                    "smiles": PRESET_COMPOUNDS.get(s_name, {}).get("smiles", "C(C1C(C(C(C(O1)O)O)O)O)O"),
-                    "features": PRESET_COMPOUNDS.get(s_name, {}).get("features", ["Polyhydroxy", "Excipient core"]),
-                    "interactionSites": PRESET_COMPOUNDS.get(s_name, {}).get("interactionSites", ["Surface hydroxyls"]),
-                    "molecularDescriptors": {"MolWt": PRESET_COMPOUNDS.get(s_name, {}).get("mw", 342.3)},
+                    "name": s,
+                    "smiles": PRESET_COMPOUNDS.get(s, {}).get("smiles", "C(C1C(C(C(C(O1)O)O)O)O)O"),
+                    "features": PRESET_COMPOUNDS.get(s, {}).get("features", ["Secondary matrix"]),
+                    "interactionSites": PRESET_COMPOUNDS.get(s, {}).get("interactionSites", ["Surface interaction sites"]),
+                    "molecularDescriptors": {"MolWt": PRESET_COMPOUNDS.get(s, {}).get("mw", 342.3)},
                 }
-                for s_name in sec_names
+                for s in sec_names
             ],
             "interactionType": "Chemical" if sec_names else "Physical",
-            "mechanism": "Hydrolytic ester cleavage catalyzed by internal carboxyl group and excipient microenvironment.",
+            "mechanism": "Hydrolytic ester cleavage with adjacent carboxylic acid assistance and solid-state condensation.",
+            "degradationImpurities": impurities,
+        }
+
+    # 2. Metformin (Biguanide)
+    elif "metformin" in p_lower or "CN(C)C(=N)" in p_name:
+        is_lactose = any("lactose" in s.lower() or "sugar" in s.lower() for s in sec_names)
+        impurities = [
+            {
+                "iupacName": "Guanylurea (Dicyandiamide Hydrolysis Product)",
+                "smiles": "NC(=O)NC(=N)N",
+                "structureDescription": "Deamination and partial hydrolysis product of the biguanide core.",
+                "origin": "Metformin",
+                "probability": 0.65,
+                "probabilityHeuristic": 0.68,
+                "probabilityBoltzmann": 0.62,
+                "relativeEnergy": -2.80,
+                "condition": "Acidic Hydrolysis",
+                "source": "Stress Degradation",
+                "mechanismExplanation": "Acid-catalyzed hydrolytic cleavage of the terminal dimethylamino group yielding guanylurea.",
+                "molecularDescriptors": {"MolWt": 102.10, "MolLogP": -1.25, "TPSA": 98.42},
+            },
+            {
+                "iupacName": "Dicyandiamide (2-Cyanoguanidine / Related Substance A)",
+                "smiles": "N#CNC(=N)N",
+                "structureDescription": "Degradation intermediate formed by elimination of dimethylamine.",
+                "origin": "Metformin",
+                "probability": 0.52,
+                "probabilityHeuristic": 0.55,
+                "probabilityBoltzmann": 0.48,
+                "relativeEnergy": 1.40,
+                "condition": "Thermal Degradation",
+                "source": "Direct Degradation",
+                "mechanismExplanation": "Thermal elimination of dimethylamine under dry heat conditions.",
+                "molecularDescriptors": {"MolWt": 84.08, "MolLogP": -0.85, "TPSA": 79.52},
+            },
+        ]
+
+        if is_lactose:
+            impurities.insert(0, {
+                "iupacName": "Metformin-Lactose Maillard Condensation Adduct",
+                "smiles": "CN(C)C(=N)NC(=N)NCC1OC(C(C(C1O)O)O)CO",
+                "structureDescription": "Condensation adduct formed between the biguanide amine and aldose reducing sugar.",
+                "origin": "Metformin + Lactose",
+                "probability": 0.89,
+                "probabilityHeuristic": 0.92,
+                "probabilityBoltzmann": 0.85,
+                "relativeEnergy": -4.60,
+                "condition": "Chemical Incompatibility",
+                "source": "Interaction with other compound",
+                "mechanismExplanation": (
+                    "Nucleophilic addition of the terminal biguanide amino nitrogen onto the open-chain aldehyde "
+                    "form of lactose, yielding a glycosylamine that undergoes irreversible rearrangement."
+                ),
+                "molecularDescriptors": {"MolWt": 453.45, "MolLogP": -3.10, "TPSA": 215.30},
+            })
+
+        return {
+            "chainOfThought": (
+                "1. Metformin is a strongly basic biguanide with pKa values of 2.8 and 11.5.\n"
+                "2. Nucleophilic Reactivity: Terminal and imine nitrogens exhibit high nucleophilic reactivity.\n"
+                "3. Incompatibility: In mixtures containing reducing sugars like Lactose, the open-chain aldose form reacts via condensation pathway, creating glycosylamines and chromophores.\n"
+                "4. Intrinsic Stability: Under hydrolytic conditions, biguanides undergo hydrolytic deamination yielding guanylurea."
+            ),
+            "compounds": [
+                {
+                    "name": "Metformin",
+                    "smiles": "CN(C)C(=N)NC(=N)N",
+                    "features": ["Biguanide core", "Secondary & primary amines"],
+                    "interactionSites": ["Nucleophilic biguanide nitrogens (reaction prone)"],
+                    "molecularDescriptors": {"MolWt": 129.16, "MolLogP": -1.43, "TPSA": 87.97},
+                }
+            ] + [
+                {
+                    "name": s,
+                    "smiles": PRESET_COMPOUNDS.get(s, {}).get("smiles", "C(C1C(C(C(C(O1)O)O)O)O)O"),
+                    "features": PRESET_COMPOUNDS.get(s, {}).get("features", ["Secondary reagent"]),
+                    "interactionSites": PRESET_COMPOUNDS.get(s, {}).get("interactionSites", ["Aldose anomeric center"]),
+                    "molecularDescriptors": {"MolWt": PRESET_COMPOUNDS.get(s, {}).get("mw", 342.3)},
+                }
+                for s in sec_names
+            ],
+            "interactionType": "Chemical" if is_lactose else "Physical",
+            "mechanism": "Condensation reaction with aldose reducing sugars and hydrolytic deamination.",
+            "degradationImpurities": impurities,
+        }
+
+    # 3. Paracetamol (Acetaminophen)
+    elif "paracetamol" in p_lower or "acetaminophen" in p_lower or "Nc1ccc(O)cc1" in p_name:
+        return {
+            "chainOfThought": (
+                "1. Acetaminophen contains an oxidizable phenolic hydroxyl and a secondary acetamide linkage.\n"
+                "2. Hydrolytic Pathway: In strong acid or base, hydrolysis of the amide bond generates 4-Aminophenol and acetic acid.\n"
+                "3. Oxidative Pathway: In presence of trace peroxides (commonly found in polymeric additives like Povidone/PVP), 1-electron oxidation generates N-acetyl-p-benzoquinone imine (NAPQI) or dimerized biphenylquinones."
+            ),
+            "compounds": [
+                {
+                    "name": "Acetaminophen (Paracetamol)",
+                    "smiles": "CC(=O)Nc1ccc(O)cc1",
+                    "features": ["Secondary amide", "Phenolic hydroxyl", "Aromatic ring"],
+                    "interactionSites": ["Phenolic OH (oxidation prone)", "Amide linkage"],
+                    "molecularDescriptors": {"MolWt": 151.16, "MolLogP": 0.46, "TPSA": 49.33},
+                }
+            ],
+            "interactionType": "Chemical" if sec_names else "Physical",
+            "mechanism": "Amide bond hydrolytic cleavage and peroxide-induced phenolic oxidation.",
             "degradationImpurities": [
                 {
-                    "iupacName": "Salicylic Acid (Impurity C)",
-                    "smiles": "Oc1ccccc1C(=O)O",
-                    "structureDescription": "Hydrolysis product formed via ester cleavage of the acetyl moiety.",
-                    "origin": "Aspirin",
-                    "probability": 0.88,
-                    "probabilityHeuristic": 0.90,
-                    "probabilityBoltzmann": 0.85,
-                    "relativeEnergy": -4.20,
-                    "condition": "Acidic Hydrolysis",
-                    "source": "Stress degradation",
-                    "mechanismExplanation": "Intramolecular carboxyl-assisted nucleophilic acyl substitution of the ester carbonyl by water.",
-                    "molecularDescriptors": {"MolWt": 138.12, "MolLogP": 2.26, "TPSA": 57.53},
+                    "iupacName": "4-Aminophenol",
+                    "smiles": "Nc1ccc(O)cc1",
+                    "structureDescription": "Deacetylated core aminophenol formed by amide hydrolysis.",
+                    "origin": "Paracetamol",
+                    "probability": 0.82,
+                    "probabilityHeuristic": 0.85,
+                    "probabilityBoltzmann": 0.78,
+                    "relativeEnergy": -3.10,
+                    "condition": "Acidic / Basic Hydrolysis",
+                    "source": "Direct Degradation",
+                    "mechanismExplanation": "Acid or base-catalyzed nucleophilic acyl substitution of the amide carbonyl by water.",
+                    "molecularDescriptors": {"MolWt": 109.13, "MolLogP": 0.04, "TPSA": 46.25},
                 },
                 {
-                    "iupacName": "Acetylsalicylsalicylic Acid (Impurity F)",
-                    "smiles": "CC(=O)Oc1ccccc1C(=O)Oc2ccccc2C(=O)O",
-                    "structureDescription": "Dimeric ester condensation adduct formed under elevated thermal stress.",
-                    "origin": "Aspirin",
-                    "probability": 0.42,
+                    "iupacName": "N-Acetyl-p-benzoquinone Imine (NAPQI)",
+                    "smiles": "CC(=O)N=C1C=CC(=O)C=C1",
+                    "structureDescription": "Electrophilic quinone imine oxidation intermediate.",
+                    "origin": "Paracetamol",
+                    "probability": 0.48,
                     "probabilityHeuristic": 0.45,
-                    "probabilityBoltzmann": 0.38,
-                    "relativeEnergy": 2.15,
-                    "condition": "Thermal Degradation",
-                    "source": "Stress degradation",
-                    "mechanismExplanation": "Intermolecular transesterification between two acetylsalicylic acid molecules releasing acetic acid.",
-                    "molecularDescriptors": {"MolWt": 300.26, "MolLogP": 3.42, "TPSA": 89.90},
-                },
-                {
-                    "iupacName": "Acetylsalicylic Anhydride (Impurity E)",
-                    "smiles": "CC(=O)Oc1ccccc1C(=O)OC(=O)c2ccccc2OC(=O)C",
-                    "structureDescription": "Symmetrical diacyl anhydride formed during dehydration and heat exposure.",
-                    "origin": "Aspirin",
-                    "probability": 0.28,
-                    "probabilityHeuristic": 0.30,
-                    "probabilityBoltzmann": 0.25,
-                    "relativeEnergy": 5.40,
-                    "condition": "Thermal Degradation",
-                    "source": "Stress degradation",
-                    "mechanismExplanation": "Dehydration coupling of adjacent carboxylic acid functionalities under high thermal activation energy.",
-                    "molecularDescriptors": {"MolWt": 342.30, "MolLogP": 3.65, "TPSA": 99.13},
+                    "probabilityBoltzmann": 0.50,
+                    "relativeEnergy": 1.95,
+                    "condition": "Oxidation",
+                    "source": "Interaction with other compound" if sec_names else "Direct Degradation",
+                    "mechanismExplanation": "Two-electron oxidation of the phenolic system catalyzed by trace peroxide impurities in additives.",
+                    "molecularDescriptors": {"MolWt": 149.15, "MolLogP": 0.72, "TPSA": 46.17},
                 },
             ],
         }
 
-    # General fallback for any other compound
+    # 4. General Molecular Decomposition Fallback
     return {
         "chainOfThought": (
-            f"Analysis for primary compound '{p_name}' "
-            + (f"in presence of {', '.join(sec_names)}: " if sec_names else "")
-            + "Evaluation of heteroatoms, functional group susceptibility (hydrolytic esters/amides, oxidizable electron-rich phenols/olefins, and photolabile bonds). "
-            "Under forced thermal, oxidative, and hydrolytic stress, major degradation pathways emerge governed by lowest bond dissociation energy and thermodynamic stability."
+            f"1. Systematic Chemical Evaluation: Analyzing '{p_name}' "
+            + (f"in the presence of {', '.join(sec_names)}. " if sec_names else ". ")
+            + "2. Evaluated electrophilic/nucleophilic functional groups (esters, amides, electron-rich aromatics, amines).\n"
+            "3. Determined major transformation and degradation pathways under thermal, moisture, and oxidative stress conditions."
         ),
         "compounds": [
             {
                 "name": p_name,
                 "smiles": primary.get("value", "CC(=O)NC1=CC=C(O)C=C1"),
-                "features": ["Functional pharmacophore", "Aromatic conjugate system"],
-                "interactionSites": ["Reactive heteroatom centers"],
+                "features": ["Primary Scaffold", "Conjugated ring system"],
+                "interactionSites": ["Reactive heteroatoms"],
                 "molecularDescriptors": get_mol_descriptors(primary.get("value", "")),
             }
         ] + [
             {
-                "name": s.get("value", "Excipient"),
-                "smiles": s.get("value", ""),
-                "features": ["Formulation matrix"],
-                "interactionSites": ["Adsorption / reactive surface sites"],
-                "molecularDescriptors": get_mol_descriptors(s.get("value", "")),
+                "name": s,
+                "smiles": s,
+                "features": ["Secondary co-reactant / matrix"],
+                "interactionSites": ["Surface reactive contact points"],
+                "molecularDescriptors": get_mol_descriptors(s),
             }
-            for s in secondaries if s.get("value", "").strip()
+            for s in sec_names
         ],
         "interactionType": "Chemical" if sec_names else "Physical",
-        "mechanism": "Oxidative and hydrolytic stress transformation yielding related substances.",
+        "mechanism": "Oxidative bond dissociation, hydrolytic cleavage, and stress rearrangement.",
         "degradationImpurities": [
             {
-                "iupacName": f"4-Aminophenol (Major Degradant)",
+                "iupacName": f"Desacyl / Cleavage Product of {p_name}",
                 "smiles": "Nc1ccc(O)cc1",
-                "structureDescription": "Deacylation / cleavage product under aggressive hydrolytic conditions.",
+                "structureDescription": "Hydrolytic cleavage of labile functional bonds.",
                 "origin": p_name,
-                "probability": 0.76,
+                "probability": 0.75,
                 "probabilityHeuristic": 0.78,
-                "probabilityBoltzmann": 0.74,
-                "relativeEnergy": -1.85,
+                "probabilityBoltzmann": 0.72,
+                "relativeEnergy": -2.10,
                 "condition": "Acidic Hydrolysis",
-                "source": "Stress degradation",
-                "mechanismExplanation": "Hydrolysis of amide linkage releasing corresponding amine intermediate.",
+                "source": "Direct Degradation",
+                "mechanismExplanation": "Solvolysis of primary heteroatom linkages under elevated moisture and thermal activation.",
                 "molecularDescriptors": {"MolWt": 109.13, "MolLogP": 0.04, "TPSA": 46.25},
             },
             {
-                "iupacName": f"N-(4-Hydroxyphenyl)acetamide Quinone-imine Adduct",
+                "iupacName": f"Quinone / Oxidative Adduct of {p_name}",
                 "smiles": "O=C1C=CC(=O)C=C1",
-                "structureDescription": "Oxidative benzoquinone derivative triggered by peroxide trace residuals.",
+                "structureDescription": "Electron transfer oxidation forming conjugate quinoid substance.",
                 "origin": p_name,
-                "probability": 0.44,
+                "probability": 0.42,
                 "probabilityHeuristic": 0.40,
-                "probabilityBoltzmann": 0.48,
-                "relativeEnergy": 1.20,
+                "probabilityBoltzmann": 0.45,
+                "relativeEnergy": 1.35,
                 "condition": "Oxidation",
-                "source": "Interaction with other compound" if sec_names else "Stress degradation",
-                "mechanismExplanation": "One-electron radical oxidation forming semiquinone radical followed by dehydrogenation.",
+                "source": "Direct Degradation",
+                "mechanismExplanation": "Radical auto-oxidation via atmospheric oxygen or trace catalysis.",
                 "molecularDescriptors": {"MolWt": 108.09, "MolLogP": 0.35, "TPSA": 34.14},
             },
         ],
@@ -358,7 +938,7 @@ def get_realistic_prediction(
 
 
 # ==============================================================================
-# 5. Gemini AI Prediction Engine (Official SDK with Multi-Model Fallback)
+# 5. Gemini AI Prediction Engine (Official google-genai SDK)
 # ==============================================================================
 def run_gemini_prediction(
     primary: Dict[str, str],
@@ -366,68 +946,59 @@ def run_gemini_prediction(
     method: str,
     api_key: str,
 ) -> Dict[str, Any]:
-    """Invokes Google Gemini via google-genai SDK to generate chemical degradation analysis."""
+    """Invokes Gemini model for deep mechanistic chemical analysis."""
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
 
-    # Prepare input description
     compounds_text = f"Primary Compound: {primary['value']} (Input Format: {primary.get('type', 'Name')})\n"
     for idx, sec in enumerate(secondaries):
         if sec.get("value", "").strip():
             compounds_text += f"Secondary Compound {idx + 1}: {sec['value']} (Input Format: {sec.get('type', 'Name')})\n"
 
-    prob_prompt = ""
-    if method == "Boltzmann":
-        prob_prompt = "Calculate probabilities based on Boltzmann distribution at 298.15K with relativeEnergy (ΔG) in kcal/mol."
-    elif method == "Both":
-        prob_prompt = "Provide BOTH 'probabilityHeuristic' (expert kinetic reasoning) and 'probabilityBoltzmann' (thermodynamic ΔG in kcal/mol). Set main 'probability' to the Boltzmann estimate."
-    else:
-        prob_prompt = "Calculate probabilities based on heuristic pharmaceutical stability principles and kinetic activation barriers."
-
-    system_instruction = (
-        "You are an expert computational chemist and pharmaceutical formulation scientist specializing in ICH Q1A/Q1B forced degradation. "
-        "Analyze the provided drug formulation. Predict specific degradation impurities (IUPAC name, valid SMILES, probability, mechanism, stress condition). "
-        "Strictly obey standard chemical valence rules for all SMILES strings (e.g. 4 bonds for Carbon, 3 for Nitrogen, 2 for Oxygen). "
-        "Output ONLY raw, valid JSON matching the exact schema."
+    prob_guidance = (
+        "Calculate probabilities based on Boltzmann distribution at 298.15K with relativeEnergy (ΔG) in kcal/mol."
+        if method == "Boltzmann"
+        else "Calculate probabilities based on both heuristic kinetic activation and thermodynamic ΔG at 298.15K."
     )
 
     prompt = f"""
-{system_instruction}
+You are an elite computational chemist specializing in chemical reaction modeling, cross-interactions, and degradation pathways.
+Analyze the following chemical mixture. Predict specific reaction byproducts and degradation products (IUPAC name, valid canonical SMILES adhering strictly to chemical valence, probability, mechanism, stress condition).
 
-FORMULATION INPUTS:
+MIXTURE INPUTS:
 {compounds_text}
 
 EVALUATION METHOD: {method}
-{prob_prompt}
+{prob_guidance}
 
-You must return a single JSON object with this EXACT structure:
+Return ONLY a single valid JSON object matching this schema:
 {{
-  "chainOfThought": "Comprehensive step-by-step chemical reasoning explaining mechanism, reactive centers, and thermodynamic/kinetic pathways.",
+  "chainOfThought": "Detailed step-by-step chemical reasoning explaining mechanism, reactive centers, and reaction pathways.",
   "compounds": [
     {{
-      "name": "Exact Name of Compound",
+      "name": "Exact Compound Name",
       "smiles": "Valid Canonical SMILES",
-      "features": ["Feature 1", "Feature 2"],
-      "interactionSites": ["Reactive Site 1", "Reactive Site 2"]
+      "features": ["Functional group 1", "Functional group 2"],
+      "interactionSites": ["Reactive site 1", "Reactive site 2"]
     }}
   ],
-  "interactionType": "Chemical" or "Physical" or "None",
-  "mechanism": "Summary sentence of the overall interaction mechanism",
+  "interactionType": "Chemical" or "Physical",
+  "mechanism": "Concise summary sentence of overall interaction and reaction mechanism",
   "degradationImpurities": [
     {{
-      "iupacName": "IUPAC or Chemical Name of New Impurity",
-      "smiles": "Valid SMILES adhering to strict valence rules",
-      "structureDescription": "Clear description of structural modification",
-      "origin": "Which input compound it originated from",
+      "iupacName": "IUPAC or Chemical Name of Product",
+      "smiles": "Valid Canonical SMILES adhering strictly to valence rules",
+      "structureDescription": "Clear description of structural transformation",
+      "origin": "Source compound name",
       "probability": 0.85,
       "probabilityHeuristic": 0.88,
       "probabilityBoltzmann": 0.82,
       "relativeEnergy": -3.20,
-      "condition": "Acidic Hydrolysis" or "Basic Hydrolysis" or "Oxidation" or "Photodegradation" or "Thermal Degradation",
-      "source": "Stress degradation" or "Interaction with other compound",
-      "mechanismExplanation": "Detailed chemical reaction mechanism explaining how this degradant forms"
+      "condition": "Acidic Hydrolysis" or "Basic Hydrolysis" or "Oxidation" or "Photodegradation" or "Thermal Degradation" or "Chemical Incompatibility",
+      "source": "Direct Degradation" or "Interaction with other compound",
+      "mechanismExplanation": "Detailed chemical reaction mechanism explaining how this product forms"
     }}
   ]
 }}
@@ -447,11 +1018,10 @@ You must return a single JSON object with this EXACT structure:
                 ),
             )
             raw_text = resp.text.strip()
-            # Clean markdown formatting if present
             if raw_text.startswith("```"):
                 raw_text = re.sub(r"^```(?:json)?\n", "", raw_text)
                 raw_text = re.sub(r"\n```$", "", raw_text)
-            
+
             data = json.loads(raw_text)
 
             # Augment with RDKit descriptors
@@ -464,7 +1034,7 @@ You must return a single JSON object with this EXACT structure:
                 smi = imp.get("smiles", "")
                 if smi:
                     imp["molecularDescriptors"] = get_mol_descriptors(smi)
-                    if (method in ["Boltzmann", "Both"]) and imp.get("relativeEnergy") is None:
+                    if imp.get("relativeEnergy") is None:
                         calc_e = compute_relative_energy(smi)
                         if calc_e is not None:
                             imp["relativeEnergy"] = calc_e
@@ -475,19 +1045,19 @@ You must return a single JSON object with this EXACT structure:
             last_err = e
             continue
 
-    raise RuntimeError(f"All Gemini models failed: {last_err}")
+    raise RuntimeError(f"All Gemini model calls failed: {last_err}")
 
 
 # ==============================================================================
-# 6. Excel Report Generator (pandas & openpyxl)
+# 6. Excel Stability Report Exporter
 # ==============================================================================
 def create_excel_report(result: Dict[str, Any]) -> bytes:
-    """Creates a formatted multi-section pharmaceutical stability report in Excel (.xlsx)."""
+    """Generates a multi-sheet chemical interaction Excel workbook."""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        # 1. Overview sheet
+        # Overview Sheet
         overview_data = [
-            ["A-Pi1 PHARMACEUTICAL STABILITY & DEGRADATION REPORT", ""],
+            ["INTERACTION CHEMICAL ANALYSIS & BYPRODUCT REPORT", ""],
             [f"Generated Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ""],
             ["Overall Interaction Type", result.get("interactionType", "N/A")],
             ["Primary Mechanism", result.get("mechanism", "N/A")],
@@ -495,26 +1065,26 @@ def create_excel_report(result: Dict[str, Any]) -> bytes:
             ["AI REASONING FRAMEWORK", ""],
             [result.get("chainOfThought", "N/A"), ""],
         ]
-        df_overview = pd.DataFrame(overview_data, columns=["Parameter", "Details"])
-        df_overview.to_excel(writer, sheet_name="Overview", index=False)
+        pd.DataFrame(overview_data, columns=["Parameter", "Details"]).to_excel(
+            writer, sheet_name="Overview", index=False
+        )
 
-        # 2. Input Compounds sheet
+        # Input Compounds Sheet
         comp_rows = []
         for idx, comp in enumerate(result.get("compounds", [])):
             mw = comp.get("molecularDescriptors", {}).get("MolWt", "N/A")
             comp_rows.append({
-                "Role": "Primary" if idx == 0 else f"Secondary {idx}",
+                "Role": "Primary Compound" if idx == 0 else f"Secondary Compound {idx}",
                 "Compound Name": comp.get("name", "N/A"),
                 "SMILES": comp.get("smiles", "N/A"),
                 "Molecular Weight (g/mol)": mw,
                 "Structural Features": ", ".join(comp.get("features", [])),
-                "Potential Interaction Sites": ", ".join(comp.get("interactionSites", [])),
+                "Potential Reactive Sites": ", ".join(comp.get("interactionSites", [])),
             })
         if comp_rows:
-            df_comps = pd.DataFrame(comp_rows)
-            df_comps.to_excel(writer, sheet_name="Input Compounds", index=False)
+            pd.DataFrame(comp_rows).to_excel(writer, sheet_name="Input Mixture", index=False)
 
-        # 3. Predicted Impurities sheet
+        # Impurities Sheet
         imp_rows = []
         for imp in sorted(
             result.get("degradationImpurities", []),
@@ -523,26 +1093,14 @@ def create_excel_report(result: Dict[str, Any]) -> bytes:
         ):
             mw = imp.get("molecularDescriptors", {}).get("MolWt", "N/A")
             prob = f"{imp.get('probability', 0) * 100:.1f}%" if imp.get("probability") is not None else "N/A"
-            h_prob = (
-                f"{imp.get('probabilityHeuristic', 0) * 100:.1f}%"
-                if imp.get("probabilityHeuristic") is not None
-                else "N/A"
-            )
-            b_prob = (
-                f"{imp.get('probabilityBoltzmann', 0) * 100:.1f}%"
-                if imp.get("probabilityBoltzmann") is not None
-                else "N/A"
-            )
-            dG = (
-                f"{imp.get('relativeEnergy', 0):.2f}"
-                if imp.get("relativeEnergy") is not None
-                else "N/A"
-            )
+            h_prob = f"{imp.get('probabilityHeuristic', 0) * 100:.1f}%" if imp.get("probabilityHeuristic") is not None else "N/A"
+            b_prob = f"{imp.get('probabilityBoltzmann', 0) * 100:.1f}%" if imp.get("probabilityBoltzmann") is not None else "N/A"
+            dG = f"{imp.get('relativeEnergy', 0):.2f}" if imp.get("relativeEnergy") is not None else "N/A"
 
             imp_rows.append({
                 "IUPAC Name": imp.get("iupacName", "N/A"),
                 "SMILES": imp.get("smiles", "N/A"),
-                "MW (g/mol)": mw,
+                "Molecular Weight (g/mol)": mw,
                 "Probability": prob,
                 "Heuristic %": h_prob,
                 "Boltzmann %": b_prob,
@@ -550,592 +1108,217 @@ def create_excel_report(result: Dict[str, Any]) -> bytes:
                 "Stress Condition": imp.get("condition", "N/A"),
                 "Origin": imp.get("origin", "N/A"),
                 "Source": imp.get("source", "N/A"),
-                "Structure Description": imp.get("structureDescription", "N/A"),
+                "Transformation Description": imp.get("structureDescription", "N/A"),
                 "Mechanism Explanation": imp.get("mechanismExplanation", "N/A"),
             })
         if imp_rows:
-            df_imps = pd.DataFrame(imp_rows)
-            df_imps.to_excel(writer, sheet_name="Degradation Impurities", index=False)
+            pd.DataFrame(imp_rows).to_excel(writer, sheet_name="Predicted Impurities", index=False)
 
     return output.getvalue()
 
 
 # ==============================================================================
-# 7. Exact High-Fidelity UI Styling (Tailwind-Accurate CSS)
-# ==============================================================================
-st.markdown("""
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-<style>
-    /* Reset and Root */
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        color: #0F172A;
-    }
-    
-    /* Hide Default Streamlit Clutter */
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 0px !important;
-    }
-    div[data-testid="stToolbar"] { visibility: hidden; }
-    
-    /* Layout Container */
-    .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 3rem !important;
-        max-width: 1080px !important;
-        margin: 0 auto !important;
-    }
-
-    /* Custom Header Bar */
-    .ap1-navbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem 1.5rem;
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 14px;
-        margin-bottom: 2rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .ap1-logo {
-        font-family: 'Playfair Display', serif;
-        font-size: 1.4rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        color: #0F172A;
-        display: flex;
-        align-items: center;
-        gap: 0.15rem;
-    }
-    .ap1-logo span {
-        font-size: 1.65rem;
-        color: #4F46E5;
-        font-weight: 800;
-    }
-    .ap1-badge-pill {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        padding: 0.35rem 0.85rem;
-        border-radius: 9999px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        color: #64748B;
-    }
-    .ap1-badge-pill .dot-db {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #4F46E5;
-        display: inline-block;
-    }
-    .ap1-badge-pill .dot-hist {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #10B981;
-        display: inline-block;
-    }
-
-    /* Main Container Card */
-    .ap1-card {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-        margin-bottom: 2rem;
-    }
-    .ap1-card-title {
-        font-family: 'Playfair Display', serif;
-        font-size: 1.35rem;
-        font-weight: 700;
-        color: #0F172A;
-        margin-bottom: 0.25rem;
-    }
-    .ap1-card-desc {
-        font-size: 0.875rem;
-        color: #64748B;
-        margin-bottom: 1.5rem;
-    }
-
-    /* Primary Compound Tile */
-    .ap1-primary-box {
-        background: #F5F7FF;
-        border: 1px solid #E0E7FF;
-        border-radius: 12px;
-        padding: 1.25rem;
-        margin-bottom: 1.25rem;
-    }
-    .ap1-primary-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #312E81;
-        margin-bottom: 0.75rem;
-    }
-    .ap1-primary-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #4F46E5;
-    }
-
-    /* Secondary Compounds Tile */
-    .ap1-secondary-box {
-        background: #F8FAFC;
-        border: 1px solid #F1F5F9;
-        border-radius: 12px;
-        padding: 1.25rem;
-        margin-bottom: 1.5rem;
-    }
-    .ap1-secondary-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #334155;
-        margin-bottom: 0.75rem;
-    }
-
-    /* Method Selection Tile */
-    .ap1-method-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.75rem;
-        margin-bottom: 1.75rem;
-    }
-    .ap1-method-card {
-        border: 1px solid #E2E8F0;
-        background: #FFFFFF;
-        border-radius: 12px;
-        padding: 0.85rem 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    .ap1-method-card.active {
-        background: #F5F7FF;
-        border-color: #818CF8;
-        box-shadow: 0 0 0 1px #818CF8;
-    }
-    .ap1-method-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #1E293B;
-    }
-    .ap1-method-sub {
-        font-size: 0.72rem;
-        color: #64748B;
-    }
-
-    /* Primary Action Buttons */
-    div.stButton > button {
-        background: #4F46E5 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        font-size: 0.92rem !important;
-        padding: 0.65rem 1.25rem !important;
-        transition: all 0.15s ease-in-out !important;
-        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2) !important;
-    }
-    div.stButton > button:hover {
-        background: #4338CA !important;
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
-        transform: translateY(-1px);
-    }
-
-    /* Results Header & Badges */
-    .ap1-pill-badge {
-        display: inline-block;
-        font-size: 0.65rem;
-        font-weight: 700;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        padding: 0.25rem 0.85rem;
-        border-radius: 9999px;
-        background: #FFFFFF;
-        border: 1px solid #CBD5E1;
-        color: #64748B;
-    }
-
-    /* Compound Card in Results */
-    .ap1-res-compound-card {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: row;
-        margin-bottom: 1.25rem;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-    }
-    .ap1-res-mol-box {
-        width: 200px;
-        min-width: 200px;
-        background: #F8FAFC;
-        border-right: 1px solid #F1F5F9;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-        position: relative;
-    }
-    .ap1-res-badge-id {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        background: #F1F5F9;
-        color: #475569;
-        font-size: 0.65rem;
-        font-weight: 700;
-        padding: 0.15rem 0.45rem;
-        border-radius: 4px;
-    }
-    .ap1-res-comp-body {
-        padding: 1.25rem 1.5rem;
-        flex: 1;
-    }
-    .ap1-res-comp-title {
-        font-family: 'Playfair Display', serif;
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: #0F172A;
-    }
-    .ap1-res-smiles {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        color: #94A3B8;
-        word-break: break-all;
-        margin: 0.35rem 0 0.65rem 0;
-    }
-    .ap1-tag {
-        display: inline-block;
-        font-size: 0.68rem;
-        font-weight: 500;
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        color: #475569;
-        padding: 0.15rem 0.5rem;
-        border-radius: 4px;
-        margin-right: 0.35rem;
-        margin-bottom: 0.35rem;
-    }
-    .ap1-tag.site {
-        background: #F5F7FF;
-        border-color: #E0E7FF;
-        color: #4338CA;
-    }
-
-    /* Impurity Card */
-    .ap1-impurity-card {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 14px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: row;
-        margin-bottom: 1.5rem;
-        transition: border-color 0.15s ease;
-    }
-    .ap1-impurity-card:hover {
-        border-color: #818CF8;
-    }
-    .ap1-imp-mol-box {
-        width: 240px;
-        min-width: 240px;
-        background: #FFFFFF;
-        border-right: 1px solid #F1F5F9;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.25rem;
-        position: relative;
-    }
-    .ap1-imp-body {
-        padding: 1.5rem;
-        flex: 1;
-    }
-    .ap1-imp-name {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #0F172A;
-        line-height: 1.3;
-    }
-    .ap1-imp-prob {
-        font-size: 1.25rem;
-        font-weight: 800;
-        color: #4F46E5;
-        text-align: right;
-    }
-    .ap1-imp-prob-sub {
-        font-size: 0.65rem;
-        font-weight: 600;
-        color: #94A3B8;
-        text-transform: uppercase;
-        text-align: right;
-    }
-    .ap1-imp-desc {
-        font-size: 0.85rem;
-        color: #475569;
-        line-height: 1.5;
-        margin: 0.65rem 0;
-    }
-    .ap1-imp-mech-box {
-        background: #F8FAFC;
-        border: 1px solid #F1F5F9;
-        border-radius: 8px;
-        padding: 0.75rem;
-        font-size: 0.78rem;
-        color: #475569;
-        line-height: 1.5;
-        margin-bottom: 0.75rem;
-    }
-    .ap1-imp-pills {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        margin-top: 0.5rem;
-    }
-    .ap1-imp-pill {
-        font-size: 0.65rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 0.2rem 0.65rem;
-        border-radius: 9999px;
-    }
-    .ap1-pill-origin { background: #EEF2FF; color: #4338CA; }
-    .ap1-pill-cond { background: #FEF3C7; color: #B45309; }
-    .ap1-pill-src { background: #ECFDF5; color: #047857; }
-    .ap1-pill-smi { background: #F1F5F9; color: #475569; font-family: monospace; text-transform: none; }
-
-    /* Footer */
-    .ap1-footer {
-        border-top: 1px solid #E2E8F0;
-        padding: 2rem 0 1rem 0;
-        margin-top: 3rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.8rem;
-        color: #94A3B8;
-    }
-    .ap1-footer a {
-        color: #64748B;
-        text-decoration: none;
-        margin-left: 1.5rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-
-# ==============================================================================
-# 8. Session State Initialization
+# 7. Session State Initialization
 # ==============================================================================
 if "view" not in st.session_state:
-    st.session_state.view = "input"  # "input", "loading", or "results"
+    st.session_state.view = "input"
 if "result" not in st.session_state:
     st.session_state.result = None
 if "primary_compound" not in st.session_state:
     st.session_state.primary_compound = {"value": "Aspirin", "type": "Name"}
 if "secondary_compounds" not in st.session_state:
-    st.session_state.secondary_compounds = [{"value": "", "type": "Name"}]
-if "selected_methods" not in st.session_state:
-    st.session_state.selected_methods = {"Heuristic"}
+    st.session_state.secondary_compounds = [{"value": "Magnesium Stearate", "type": "Name"}]
+if "method" not in st.session_state:
+    st.session_state.method = "Both"
 if "error_message" not in st.session_state:
     st.session_state.error_message = None
 
 
 # ==============================================================================
-# 9. Top Navigation Bar (Branding & Stats)
+# 8. Top Branding & Status Header
 # ==============================================================================
-st.markdown("""
-<div class="ap1-navbar">
-    <div class="ap1-logo">
-        A-Pi<span>1</span>
-    </div>
-    <div class="ap1-badge-pill">
-        <span><span class="dot-db"></span> 45 Compounds</span>
-        <span>|</span>
-        <span><span class="dot-hist"></span> 12 Predictions</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-
-# ==============================================================================
-# 10. View: Input Form
-# ==============================================================================
-if st.session_state.view == "input":
+col_nav1, col_nav2 = st.columns([3, 2])
+with col_nav1:
     st.markdown("""
-    <div class="ap1-card" style="padding-bottom: 1rem;">
-        <div class="ap1-card-title">Input</div>
-        <div class="ap1-card-desc">Predict interactions and degradation pathways between compounds or analyze intrinsic stability.</div>
+    <div style="display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.25rem;">
+        <span style="font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">
+            INTERACTION
+        </span>
+        <span style="font-size: 0.85rem; font-weight: 600; color: #64748B; letter-spacing: -0.01em;">
+            Chemical Interaction & Byproduct Prediction Engine
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+with col_nav2:
+    st.markdown("""
+    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; height: 100%;">
+        <span style="background: #F1F5F9; color: #475569; font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #E2E8F0;">
+            Kinetic & Thermodynamic Modeling
+        </span>
+        <span style="background: #EEF2FF; color: #4338CA; font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #E0E7FF;">
+            Boltzmann 298.15K
+        </span>
     </div>
     """, unsafe_allow_html=True)
 
+st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
+
+
+# ==============================================================================
+# 9. View: Input Form & Mixture Builder
+# ==============================================================================
+if st.session_state.view == "input":
     if st.session_state.error_message:
-        st.error(f"Analysis Error: {st.session_state.error_message}")
+        st.error(f"Prediction Notice: {st.session_state.error_message}")
         st.session_state.error_message = None
 
-    # Card Body container
-    with st.container():
-        # --- Primary Compound Section ---
+    # Card 1: Mixture Builder (Native Streamlit Elevated Container)
+    with st.container(border=True):
         st.markdown("""
-        <div class="ap1-primary-box">
-            <div class="ap1-primary-header">
-                <div class="ap1-primary-dot"></div>
-                Primary Compound
+        <div style="margin-bottom: 1.25rem;">
+            <div style="font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #0F172A;">
+                Reaction Mixture Setup
+            </div>
+            <div style="font-size: 0.88rem; color: #64748B;">
+                Define the primary chemical compound and optional secondary co-reactants or additives.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        col_p1, col_p2 = st.columns([1, 4])
-        with col_p1:
-            p_type = st.selectbox(
-                "Format",
-                ["Name", "SMILES", "SMARTS", "InChI"],
-                index=0,
-                key="p_type_select",
-                label_visibility="collapsed",
-            )
-        with col_p2:
-            p_val = st.text_input(
-                "Primary Compound Value",
-                value=st.session_state.primary_compound["value"],
-                placeholder="e.g., Aspirin or CC(=O)Oc1ccccc1C(=O)O",
-                key="primary_input",
-                label_visibility="collapsed",
-            )
-            st.session_state.primary_compound = {"value": p_val, "type": p_type}
-
-        # Preset chips for rapid exploration
-        st.caption("Quick Presets:")
-        preset_cols = st.columns(4)
-        for i, (p_name, p_data) in enumerate(list(PRESET_COMPOUNDS.items())[:4]):
-            with preset_cols[i]:
-                if st.button(f"💊 {p_name}", key=f"btn_preset_{p_name}", use_container_width=True):
-                    st.session_state.primary_compound = {"value": p_name, "type": "Name"}
+        # Quick Preset Selector
+        st.markdown("<span style='font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em;'>Quick Reaction Presets:</span>", unsafe_allow_html=True)
+        preset_cols = st.columns(len(REACTION_PRESETS))
+        for idx, (p_title, p_info) in enumerate(REACTION_PRESETS.items()):
+            with preset_cols[idx]:
+                if st.button(f"📋 {p_title.split('(')[0].strip()}", key=f"btn_pre_{idx}", use_container_width=True):
+                    st.session_state.primary_compound = dict(p_info["primary"])
+                    st.session_state.secondary_compounds = [dict(s) for s in p_info["secondaries"]]
                     st.rerun()
 
         st.markdown("<div style='height: 1.25rem;'></div>", unsafe_allow_html=True)
 
-        # --- Secondary Compounds Section ---
-        sec_count = len([s for s in st.session_state.secondary_compounds if s.get("value", "").strip()])
-        st.markdown(f"""
-        <div class="ap1-secondary-box">
-            <div class="ap1-secondary-header">
-                <span>Secondary Compounds</span>
-                <span style="font-family: monospace; font-size: 0.75rem; color: #94A3B8;">{sec_count} Added</span>
-            </div>
+        # Section: Primary Compound
+        st.markdown("""
+        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700; color: #312E81; margin-bottom: 0.35rem;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4F46E5;"></span>
+            Primary Compound
         </div>
         """, unsafe_allow_html=True)
 
+        p_col1, p_col2 = st.columns([1.2, 4.8])
+        with p_col1:
+            p_format = st.selectbox(
+                "Compound Format",
+                ["Name", "SMILES"],
+                index=["Name", "SMILES"].index(st.session_state.primary_compound.get("type", "Name")) if st.session_state.primary_compound.get("type", "Name") in ["Name", "SMILES"] else 0,
+                key="api_format_sel",
+                label_visibility="collapsed",
+            )
+        with p_col2:
+            p_val = st.text_input(
+                "Compound Value",
+                value=st.session_state.primary_compound.get("value", "Aspirin"),
+                placeholder="e.g. Aspirin or CC(=O)Oc1ccccc1C(=O)O",
+                key="api_val_inp",
+                label_visibility="collapsed",
+            )
+            st.session_state.primary_compound = {"value": p_val, "type": p_format}
+
+        st.markdown("<div style='height: 1.25rem;'></div>", unsafe_allow_html=True)
+
+        # Section: Secondary Compounds
+        sec_count = len([s for s in st.session_state.secondary_compounds if s.get("value", "").strip()])
+        st.markdown(f"""
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94A3B8;"></span>
+                Secondary Compounds (Co-reactants / Additives)
+            </div>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #64748B; background: #F1F5F9; padding: 0.15rem 0.5rem; border-radius: 4px;">
+                {sec_count} Added
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Render each secondary input row
         for s_idx, sec in enumerate(st.session_state.secondary_compounds):
-            col_s1, col_s2, col_s3 = st.columns([1, 4, 0.5])
-            with col_s1:
-                s_type = st.selectbox(
+            s_col1, s_col2, s_col3 = st.columns([1.2, 4.2, 0.6])
+            with s_col1:
+                cur_fmt = sec.get("type", "Name")
+                fmt_idx = ["Name", "SMILES"].index(cur_fmt) if cur_fmt in ["Name", "SMILES"] else 0
+                s_fmt = st.selectbox(
                     f"Format {s_idx}",
-                    ["Name", "SMILES", "SMARTS", "InChI"],
-                    index=0,
-                    key=f"s_type_{s_idx}",
+                    ["Name", "SMILES"],
+                    index=fmt_idx,
+                    key=f"sec_fmt_{s_idx}",
                     label_visibility="collapsed",
                 )
-            with col_s2:
+            with s_col2:
                 s_val = st.text_input(
-                    f"Secondary {s_idx}",
+                    f"SecVal {s_idx}",
                     value=sec.get("value", ""),
-                    placeholder="e.g., Lactose or Magnesium Stearate",
-                    key=f"s_val_{s_idx}",
+                    placeholder="e.g. Magnesium Stearate or Lactose",
+                    key=f"sec_val_{s_idx}",
                     label_visibility="collapsed",
                 )
-                st.session_state.secondary_compounds[s_idx] = {"value": s_val, "type": s_type}
-            with col_s3:
-                if st.button("✕", key=f"del_sec_{s_idx}", help="Remove compound"):
+                st.session_state.secondary_compounds[s_idx] = {"value": s_val, "type": s_fmt}
+            with s_col3:
+                if st.button("✕", key=f"btn_del_sec_{s_idx}", help="Remove compound"):
                     st.session_state.secondary_compounds.pop(s_idx)
                     if len(st.session_state.secondary_compounds) == 0:
                         st.session_state.secondary_compounds = [{"value": "", "type": "Name"}]
                     st.rerun()
 
-        # Add Secondary button
+        # Add Secondary Compound Button
         if len(st.session_state.secondary_compounds) < 4:
-            if st.button("+ Add Secondary Compound", use_container_width=True):
+            if st.button("+ Add Secondary Compound", key="btn_add_secondary", use_container_width=False):
                 st.session_state.secondary_compounds.append({"value": "", "type": "Name"})
                 st.rerun()
 
-        st.markdown("<div style='height: 1.25rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-        # --- Prediction Method Section ---
-        st.markdown("<div style='font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;'>Prediction Method</div>", unsafe_allow_html=True)
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            heur_selected = "Heuristic" in st.session_state.selected_methods
-            if st.button(
-                f"{'✓ ' if heur_selected else ''}Heuristic / AI (Expert Reasoning)",
-                key="toggle_heur",
-                use_container_width=True,
-            ):
-                if heur_selected and len(st.session_state.selected_methods) > 1:
-                    st.session_state.selected_methods.remove("Heuristic")
-                else:
-                    st.session_state.selected_methods.add("Heuristic")
-                st.rerun()
+        # Section: Prediction Method
+        st.markdown("<div style='font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;'>Prediction Engine & Methodology:</div>", unsafe_allow_html=True)
+        
+        method_choice = st.radio(
+            "Methodology",
+            options=["Both", "Heuristic", "Boltzmann"],
+            format_func=lambda x: {
+                "Both": "Dual Engine (Heuristic Kinetic Rules + Boltzmann Thermodynamic ΔG)",
+                "Heuristic": "Heuristic / AI (Expert Kinetic Activation & Transition States)",
+                "Boltzmann": "Boltzmann / Physics (Thermodynamic Free Energy ΔG Distribution at 298.15K)",
+            }[x],
+            index=["Both", "Heuristic", "Boltzmann"].index(st.session_state.method),
+            horizontal=False,
+            key="method_radio",
+            label_visibility="collapsed",
+        )
+        st.session_state.method = method_choice
 
-        with col_m2:
-            boltz_selected = "Boltzmann" in st.session_state.selected_methods
-            if st.button(
-                f"{'✓ ' if boltz_selected else ''}Boltzmann / Physics (Thermodynamic ΔG)",
-                key="toggle_boltz",
-                use_container_width=True,
-            ):
-                if boltz_selected and len(st.session_state.selected_methods) > 1:
-                    st.session_state.selected_methods.remove("Boltzmann")
-                else:
-                    st.session_state.selected_methods.add("Boltzmann")
-                st.rerun()
+        st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='height: 1.25rem;'></div>", unsafe_allow_html=True)
-
-        # Determine effective method
-        eff_method = "Both" if len(st.session_state.selected_methods) == 2 else ("Boltzmann" if "Boltzmann" in st.session_state.selected_methods else "Heuristic")
-
-        # --- Submit Action Button ---
-        if st.button("🔍 Predict Interaction and Degradation", use_container_width=True):
+        # Submit CTA Button
+        if st.button("🧪 Predict Chemical Interactions", type="primary", use_container_width=True):
             primary_val = st.session_state.primary_compound["value"].strip()
             if not primary_val:
-                st.warning("Please enter a primary compound to analyze.")
+                st.warning("Please specify a primary compound to analyze.")
             else:
                 st.session_state.view = "loading"
                 st.rerun()
 
 
 # ==============================================================================
-# 11. View: Analytical Computation (Loading Transition)
+# 10. View: Analytical Computation (Loading Transition)
 # ==============================================================================
 elif st.session_state.view == "loading":
     st.markdown("""
     <div style="text-align: center; padding: 4rem 1rem;">
-        <div style="display: inline-block; width: 64px; height: 64px; border: 4px solid #EEF2FF; border-top-color: #4F46E5; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1.5rem;"></div>
+        <div style="display: inline-block; width: 56px; height: 56px; border: 4px solid #EEF2FF; border-top-color: #4F46E5; border-radius: 50%; animation: spin 0.9s linear infinite; margin-bottom: 1.5rem;"></div>
         <h2 style="font-family: 'Playfair Display', serif; font-size: 1.75rem; font-weight: 700; color: #0F172A; margin-bottom: 0.5rem;">
-            Generating Possible Degradation Products...
+            Computing Reaction Products & Transformation Pathways...
         </h2>
-        <p style="color: #64748B; font-size: 0.9rem;">
-            Executing dual-framework kinetic & thermodynamic pathway calculations...
+        <p style="color: #64748B; font-size: 0.9rem; max-width: 540px; margin: 0 auto;">
+            Analyzing electrophilic and nucleophilic reactive centers, evaluating transition state kinetic activation barriers, and calculating Boltzmann thermodynamic free energies (ΔG).
         </p>
     </div>
     <style>
@@ -1145,12 +1328,11 @@ elif st.session_state.view == "loading":
     </style>
     """, unsafe_allow_html=True)
 
-    # Execute Prediction
     primary = st.session_state.primary_compound
     secondaries = [s for s in st.session_state.secondary_compounds if s.get("value", "").strip()]
-    eff_method = "Both" if len(st.session_state.selected_methods) == 2 else ("Boltzmann" if "Boltzmann" in st.session_state.selected_methods else "Heuristic")
+    method = st.session_state.method
 
-    # Retrieve API key
+    # API key retrieval from environment or Streamlit secrets
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if not gemini_key:
         try:
@@ -1160,200 +1342,287 @@ elif st.session_state.view == "loading":
 
     try:
         if gemini_key and gemini_key.strip():
-            prediction_result = run_gemini_prediction(primary, secondaries, eff_method, gemini_key)
+            prediction_result = run_gemini_prediction(primary, secondaries, method, gemini_key)
         else:
-            time.sleep(1.2)  # Natural visual pacing
-            prediction_result = get_realistic_prediction(primary, secondaries, eff_method)
+            time.sleep(1.0)  # Natural visual pacing
+            prediction_result = get_realistic_prediction(primary, secondaries, method)
 
         st.session_state.result = prediction_result
         st.session_state.view = "results"
         st.rerun()
 
     except Exception as exc:
-        st.session_state.error_message = str(exc)
-        # Fallback to realistic predictor if live API encounters quota/network issues
-        fallback_res = get_realistic_prediction(primary, secondaries, eff_method)
+        st.session_state.error_message = f"Live API notice: {exc}. Displaying deterministic chemical simulation."
+        fallback_res = get_realistic_prediction(primary, secondaries, method)
         st.session_state.result = fallback_res
         st.session_state.view = "results"
         st.rerun()
 
 
 # ==============================================================================
-# 12. View: Results Dashboard
+# 11. View: Results Dashboard
 # ==============================================================================
 elif st.session_state.view == "results" and st.session_state.result:
     res = st.session_state.result
 
-    # Action Toolbar (Back + Download Excel)
-    col_tb1, col_tb2 = st.columns([1, 1])
-    with col_tb1:
-        if st.button("← Back to Input"):
+    # Action Toolbar
+    col_t1, col_t2 = st.columns([1, 1])
+    with col_t1:
+        if st.button("← Back to Reaction Setup", kind="secondary"):
             st.session_state.view = "input"
             st.session_state.result = None
             st.rerun()
-    with col_tb2:
-        excel_bytes = create_excel_report(res)
+    with col_t2:
+        excel_data = create_excel_report(res)
         st.download_button(
-            label="📥 Download Excel Report",
-            data=excel_bytes,
-            file_name=f"A-Pi1_Report_{datetime.now().strftime('%Y-%m-%d')}.xlsx",
+            label="📥 Download Excel Interaction Report",
+            data=excel_data,
+            file_name=f"Interaction_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
 
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+
+    # Executive Summary Metrics
+    impurities = res.get("degradationImpurities", [])
+    max_prob = max([imp.get("probability", 0) for imp in impurities], default=0.0)
+    min_dG = min([imp.get("relativeEnergy", 0) for imp in impurities if imp.get("relativeEnergy") is not None], default=None)
+
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1:
+        st.metric(
+            label="Reaction Products",
+            value=len(impurities),
+            help="Total predicted transformation and interaction products identified.",
+        )
+    with m_col2:
+        st.metric(
+            label="Highest Probability",
+            value=f"{max_prob * 100:.1f}%",
+            help="Maximum formation likelihood among the identified products.",
+        )
+    with m_col3:
+        st.metric(
+            label="Interaction Nature",
+            value=res.get("interactionType", "Chemical"),
+            help="Dominant chemical interaction classification.",
+        )
+    with m_col4:
+        dG_label = f"{min_dG:.2f} kcal/mol" if min_dG is not None else "Calculated"
+        st.metric(
+            label="Lowest ΔG (Driving Force)",
+            value=dG_label,
+            help="Most exergonic thermodynamic pathway driving product formation.",
+        )
+
     st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
-    # --- Section: Input Compounds Card ---
-    st.markdown("""
-    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.75rem; margin-bottom: 2rem;">
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-            <span class="ap1-pill-badge">INPUT</span>
-        </div>
-    """, unsafe_allow_html=True)
+    # Tabbed Analytical Views
+    tab_overview, tab_impurities, tab_reasoning = st.tabs([
+        "🔬 Predicted Reaction Products",
+        "🧪 Reactants & Components",
+        "🧠 AI Mechanistic Framework",
+    ])
 
-    for idx, comp in enumerate(res.get("compounds", [])):
-        smi = comp.get("smiles", "")
-        svg = get_mol_svg(smi, width=200, height=200)
-        mw = comp.get("molecularDescriptors", {}).get("MolWt")
-        mw_str = f"Molecular Weight: {mw:.2f} g/mol" if mw else "Molecular Weight: N/A"
-
-        role_label = "Primary Compound" if idx == 0 else f"Secondary Compound {idx}"
-        role_color = "color: #4F46E5; background: #EEF2FF;" if idx == 0 else "color: #64748B; background: #F1F5F9;"
-
-        features_html = "".join([f'<span class="ap1-tag">{f}</span>' for f in comp.get("features", [])])
-        sites_html = "".join([f'<span class="ap1-tag site">{s}</span>' for s in comp.get("interactionSites", [])])
-
-        st.markdown(f"""
-        <div class="ap1-res-compound-card">
-            <div class="ap1-res-mol-box">
-                <div class="ap1-res-badge-id">C{idx + 1}</div>
-                {svg}
-            </div>
-            <div class="ap1-res-comp-body">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div class="ap1-res-comp-title">{comp.get('name', 'Compound')}</div>
-                    <span style="font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px; {role_color}">
-                        {role_label}
-                    </span>
-                </div>
-                <div class="ap1-res-smiles" title="{smi}">{smi}</div>
-                <div style="margin-top: 0.5rem;">
-                    <span class="ap1-tag" style="font-family: monospace;">{mw_str}</span>
-                    {features_html}
-                </div>
-                {f'''
-                <div style="margin-top: 0.75rem;">
-                    <div style="font-size: 0.65rem; font-weight: 700; color: #4F46E5; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
-                        Potential Interaction Sites
-                    </div>
-                    <div>{sites_html}</div>
-                </div>
-                ''' if sites_html else ''}
-            </div>
+    # Tab 1: Predicted Products
+    with tab_overview:
+        st.markdown("""
+        <div style="margin: 1rem 0 1.25rem 0;">
+            <h3 style="font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0F172A; margin-bottom: 0.25rem;">
+                Predicted Reaction Byproducts & Degradation Products
+            </h3>
+            <p style="font-size: 0.85rem; color: #64748B; margin: 0;">
+                Ranked by formation probability and thermodynamic stability under specified reaction conditions.
+            </p>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        if not impurities:
+            st.info("No significant byproducts detected under standard conditions.")
+        else:
+            sorted_impurities = sorted(impurities, key=lambda x: x.get("probability", 0), reverse=True)
+            for idx, imp in enumerate(sorted_impurities):
+                smi = imp.get("smiles", "")
+                svg = get_mol_svg(smi, width=250, height=250)
+                mw = imp.get("molecularDescriptors", {}).get("MolWt")
+                mw_badge = f'<span class="ap1-pill mw">MW: {mw:.2f} g/mol</span>' if mw else ""
 
-    # --- Section: AI Reasoning Framework ---
-    st.markdown(f"""
-    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem;">
-        <h4 style="font-size: 0.92rem; font-weight: 700; color: #0F172A; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-            AI Reasoning Framework
-        </h4>
-        <div style="font-size: 0.8rem; color: #475569; line-height: 1.65; white-space: pre-wrap;">
-{res.get('chainOfThought', '')}
+                prob = imp.get("probability", 0) * 100
+                h_prob = imp.get("probabilityHeuristic")
+                b_prob = imp.get("probabilityBoltzmann")
+                hb_sub = ""
+                if h_prob is not None and b_prob is not None:
+                    hb_sub = f'<div class="ap1-imp-prob-sub">Heuristic: {h_prob*100:.1f}% | Boltzmann: {b_prob*100:.1f}%</div>'
+
+                dG = imp.get("relativeEnergy")
+                dG_html = f'<div style="font-size: 0.72rem; font-family: monospace; color: #64748B; text-align: right; margin-top: 0.15rem;">ΔG: {dG:.2f} kcal/mol</div>' if dG is not None else ""
+
+                cond = imp.get("condition", "Direct Degradation")
+                cond_class = "cond-hydro"
+                if "oxid" in cond.lower():
+                    cond_class = "cond-oxid"
+                elif "therm" in cond.lower():
+                    cond_class = "cond-therm"
+                elif "photo" in cond.lower():
+                    cond_class = "cond-photo"
+                elif "react" in cond.lower() or "incomp" in cond.lower():
+                    cond_class = "cond-react"
+
+                # Render entire card in ONE single unbroken HTML block
+                card_html = f"""
+                <div class="ap1-imp-card">
+                    <div class="ap1-imp-svg">
+                        <div style="position: absolute; top: 12px; left: 12px; background: #F1F5F9; color: #475569; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 4px;">
+                            #{idx + 1}
+                        </div>
+                        {svg}
+                    </div>
+                    <div class="ap1-imp-body">
+                        <div class="ap1-imp-header">
+                            <div>
+                                <div class="ap1-imp-title">{imp.get('iupacName', 'Product')}</div>
+                                <div style="margin-top: 0.35rem;">
+                                    {mw_badge}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="ap1-imp-prob-val">{prob:.1f}%</div>
+                                {hb_sub}
+                                {dG_html}
+                            </div>
+                        </div>
+
+                        <div class="ap1-prob-bar-bg">
+                            <div class="ap1-prob-bar-fill" style="width: {min(max(prob, 5.0), 100.0):.1f}%;"></div>
+                        </div>
+
+                        <div class="ap1-imp-desc">
+                            {imp.get('structureDescription', '')}
+                        </div>
+
+                        <div class="ap1-mech-box">
+                            <div class="ap1-mech-title">
+                                <span>⚡ Chemical Mechanism:</span>
+                            </div>
+                            <div>{imp.get('mechanismExplanation', '')}</div>
+                        </div>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                            <span class="ap1-badge-cond {cond_class}">{cond}</span>
+                            <span class="ap1-pill" style="font-weight: 600; color: #4338CA; background: #EEF2FF; border-color: #E0E7FF;">Origin: {imp.get('origin', 'Parent Molecule')}</span>
+                            <span class="ap1-pill" style="font-family: monospace; font-size: 0.65rem; color: #64748B;">{smi}</span>
+                        </div>
+                    </div>
+                </div>
+                """
+                st.markdown(card_html, unsafe_allow_html=True)
+
+    # Tab 2: Reactants & Components
+    with tab_impurities:
+        st.markdown("""
+        <div style="margin: 1rem 0 1.25rem 0;">
+            <h3 style="font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0F172A; margin-bottom: 0.25rem;">
+                Input Molecular Profiles
+            </h3>
+            <p style="font-size: 0.85rem; color: #64748B; margin: 0;">
+                Calculated molecular descriptors, functional group features, and predicted reactive interaction sites.
+            </p>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    # --- Section: Predicted Degradation Impurities ---
-    st.markdown("""
-    <div style="margin-bottom: 1.25rem;">
-        <h4 style="font-size: 1.05rem; font-weight: 700; color: #0F172A;">
-            Predicted Degradation Impurities
-        </h4>
-    </div>
-    """, unsafe_allow_html=True)
+        for idx, comp in enumerate(res.get("compounds", [])):
+            smi = comp.get("smiles", "")
+            svg = get_mol_svg(smi, width=220, height=220)
+            mw = comp.get("molecularDescriptors", {}).get("MolWt")
+            mw_str = f"MW: {mw:.2f} g/mol" if mw else "MW: N/A"
+            role = "Primary Compound" if idx == 0 else f"Secondary Compound {idx}"
+            role_class = "role-primary" if idx == 0 else "role-secondary"
 
-    impurities = res.get("degradationImpurities", [])
-    if not impurities:
-        st.info("No significant degradation impurities detected under standard physiological conditions.")
-    else:
-        for idx, imp in enumerate(sorted(impurities, key=lambda x: x.get("probability", 0), reverse=True)):
-            smi = imp.get("smiles", "")
-            svg = get_mol_svg(smi, width=240, height=240)
-            mw = imp.get("molecularDescriptors", {}).get("MolWt")
-            mw_str = f"MW: {mw:.2f}" if mw else ""
+            features_pills = "".join([f'<span class="ap1-pill">{f}</span>' for f in comp.get("features", [])])
+            sites_pills = "".join([f'<span class="ap1-pill site">{s}</span>' for s in comp.get("interactionSites", [])])
 
-            prob = imp.get("probability", 0) * 100
-            prob_str = f"{prob:.1f}%"
-
-            h_prob = imp.get("probabilityHeuristic")
-            b_prob = imp.get("probabilityBoltzmann")
-            hb_str = ""
-            if h_prob is not None and b_prob is not None:
-                hb_str = f'<div class="ap1-imp-prob-sub">H: {h_prob*100:.1f}% | B: {b_prob*100:.1f}%</div>'
-
-            dG = imp.get("relativeEnergy")
-            dG_str = f'<div style="font-size: 0.7rem; font-family: monospace; color: #94A3B8; text-align: right;">ΔG: {dG:.2f} kcal/mol</div>' if dG is not None else ""
-
-            st.markdown(f"""
-            <div class="ap1-impurity-card">
-                <div class="ap1-imp-mol-box">
-                    <div class="ap1-res-badge-id">#{idx + 1}</div>
+            comp_html = f"""
+            <div class="ap1-comp-card">
+                <div class="ap1-comp-mol">
+                    <span class="ap1-comp-badge">C{idx + 1}</span>
                     {svg}
                 </div>
-                <div class="ap1-imp-body">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <div class="ap1-imp-name">{imp.get('iupacName', 'Degradant')}</div>
-                            {f'<div class="ap1-tag" style="margin-top: 0.25rem; font-family: monospace;">{mw_str}</div>' if mw_str else ''}
+                <div class="ap1-comp-info">
+                    <div style="display: flex; align-items: center; margin-bottom: 0.25rem;">
+                        <span class="ap1-comp-name">{comp.get('name', 'Compound')}</span>
+                        <span class="ap1-comp-role {role_class}">{role}</span>
+                    </div>
+                    <div class="ap1-smiles-box" title="{smi}">{smi}</div>
+                    <div class="ap1-tag-group">
+                        <span class="ap1-pill mw">{mw_str}</span>
+                        {features_pills}
+                    </div>
+                    {f'''
+                    <div style="margin-top: 0.85rem;">
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #4F46E5; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
+                            Reactive Interaction Centers:
                         </div>
-                        <div>
-                            <div class="ap1-imp-prob">{prob_str}</div>
-                            {hb_str}
-                            {dG_str}
-                        </div>
+                        <div class="ap1-tag-group">{sites_pills}</div>
                     </div>
-                    
-                    <div class="ap1-imp-desc">{imp.get('structureDescription', '')}</div>
-                    
-                    <div class="ap1-imp-mech-box">
-                        <strong style="color: #0F172A; display: block; margin-bottom: 0.25rem;">Mechanism:</strong>
-                        {imp.get('mechanismExplanation', '')}
-                    </div>
-
-                    <div class="ap1-imp-pills">
-                        <span class="ap1-imp-pill ap1-pill-origin">{imp.get('origin', 'Primary')}</span>
-                        <span class="ap1-imp-pill ap1-pill-cond">{imp.get('condition', 'Hydrolysis')}</span>
-                        <span class="ap1-imp-pill ap1-pill-src">{imp.get('source', 'Stress degradation')}</span>
-                        <span class="ap1-imp-pill ap1-pill-smi">{smi}</span>
-                    </div>
+                    ''' if sites_pills else ''}
                 </div>
+            </div>
+            """
+            st.markdown(comp_html, unsafe_allow_html=True)
+
+    # Tab 3: AI Reasoning Framework
+    with tab_reasoning:
+        st.markdown("""
+        <div style="margin: 1rem 0 1.25rem 0;">
+            <h3 style="font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0F172A; margin-bottom: 0.25rem;">
+                AI Mechanistic Reasoning Framework
+            </h3>
+            <p style="font-size: 0.85rem; color: #64748B; margin: 0;">
+                Comprehensive kinetic pathways, microenvironmental influences, and thermodynamic justification.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.container(border=True):
+            st.markdown(f"""
+            <div style="font-size: 0.9rem; color: #334155; line-height: 1.7; white-space: pre-wrap;">
+{res.get('chainOfThought', 'No detailed reasoning chain provided.')}
             </div>
             """, unsafe_allow_html=True)
 
-    # Disclaimer Footer
+        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+
+        # Technical Guidance Box
+        with st.container(border=True):
+            st.markdown("""
+            <div style="font-size: 0.85rem; color: #475569; line-height: 1.6;">
+                <strong style="color: #0F172A; display: block; margin-bottom: 0.35rem;">
+                    📋 Chemical Reaction & Byproduct Analysis:
+                </strong>
+                Products identified with high formation probability or favorable exergonic free energy (ΔG &lt; 0 kcal/mol) represent dominant reaction pathways. In experimental validation, these byproducts should be verified using analytical separation techniques (HPLC, LC-MS, GC-MS, or NMR).
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Bottom Disclaimer
     st.markdown("""
-    <div style="background: #FAFAFA; border: 1px solid #F1F5F9; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 2rem;">
+    <div style="background: #FAFAFA; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 2rem;">
         <p style="font-size: 0.72rem; color: #94A3B8; font-style: italic; margin: 0;">
-            Disclaimer: This prediction is generated by an AI model and should be used for research purposes only. Always verify with experimental HPLC/LC-MS data and professional pharmaceutical consultation.
+            Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays (HPLC, LC-MS, NMR).
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 
 # ==============================================================================
-# 13. Page Footer
+# 12. Persistent Footer
 # ==============================================================================
 st.markdown("""
-<div class="ap1-footer">
-    <div>© 2026 A-Pi1 Research Lab. All rights reserved.</div>
-    <div>
-        <a href="#">Documentation</a>
-        <a href="#">ICH Guidelines</a>
-        <a href="#">Contact Support</a>
+<div style="border-top: 1px solid #E2E8F0; padding: 2rem 0 1rem 0; margin-top: 3rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94A3B8;">
+    <div>© 2026 INTERACTION Chemical Informatics. All rights reserved.</div>
+    <div style="display: flex; gap: 1.5rem;">
+        <span style="color: #64748B;">Thermodynamic & Kinetic Modeling</span>
+        <span style="color: #64748B;">Computational Chemoinformatics</span>
     </div>
 </div>
 """, unsafe_allow_html=True)

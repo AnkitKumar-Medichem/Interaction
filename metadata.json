@@ -1,6 +1,6 @@
 {
-  "name": "A-Pi1",
-  "description": "AI-powered drug-excipient interaction predictor for pharmaceutical research.",
+  "name": "INTERACTION",
+  "description": "AI-powered chemical interaction, reaction pathway, and byproduct prediction engine.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

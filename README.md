@@ -2,9 +2,9 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# A-Pi1: AI-Powered Drug-Excipient Interaction & Degradation Predictor
+# INTERACTION: AI-Powered Chemical Interaction & Reaction Product Predictor
 
-A-Pi1 predicts chemical incompatibilities and forced stress degradation pathways (Oxidation, Acidic Hydrolysis, Basic Hydrolysis, Photolysis, and Thermolysis) between Active Pharmaceutical Ingredients (APIs) and formulation excipients. It evaluates stability using both **Heuristic Kinetic Logic** and **Boltzmann Thermodynamic Distribution ($\Delta G$ at 298.15 K)**.
+INTERACTION predicts chemical cross-interactions, reactivity, and degradation pathways (Oxidation, Acidic Hydrolysis, Basic Hydrolysis, Photolysis, and Thermolysis) between chemical compounds. It evaluates reaction pathways using both **Heuristic Kinetic Logic** and **Boltzmann Thermodynamic Distribution ($\Delta G$ at 298.15 K)**.
 
 ---
 
@@ -78,14 +78,14 @@ Ensure your repository contains:
 
 ## 🧪 Key Capabilities in the Streamlit App
 
-- **Pharmaceutical Presets**: Instant one-click loading of benchmark formulations (e.g. *Aspirin + Lactose Monohydrate*, *Paracetamol + Povidone K-30*, *Metformin + Magnesium Stearate*).
+- **Reaction Presets**: Instant one-click loading of benchmark chemical reaction mixtures (e.g. *Aspirin + Magnesium Stearate*, *Metformin + Lactose*).
 - **Dual Analytical Framework**:
   - **Heuristic Kinetics**: Evaluates reactive site vulnerability and reaction kinetics.
   - **Boltzmann Thermodynamics**: Evaluates relative formation energy $\Delta G$ (kcal/mol) at $298.15\text{ K}$.
   - **Both**: Comparative dual perspective with ranking and distribution charts.
-- **2D Chemical Structure Rendering**: Native RDKit vector SVG generation for all input compounds and predicted degradation impurities.
+- **2D Chemical Structure Rendering**: Native RDKit vector SVG generation for all input compounds and predicted transformation products.
 - **Physicochemical Properties**: Real-time calculation of Molecular Weight, LogP, TPSA, Rotatable Bonds, and Hydrogen Bond Donors/Acceptors.
-- **Excel & JSON Export**: Download complete multi-tab `.xlsx` stability reports (Executive Summary, Starting Materials, Impurities Profile) and raw JSON.
+- **Excel & JSON Export**: Download complete multi-tab `.xlsx` reaction reports (Executive Summary, Starting Materials, Reaction Products Profile) and raw JSON.
 
 ---
 

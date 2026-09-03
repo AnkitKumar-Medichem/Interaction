@@ -340,7 +340,7 @@ export default function App() {
       const rows: any[][] = [];
 
       // Title & Header
-      rows.push(["A-Pi1 REPORT"]);
+      rows.push(["INTERACTION REPORT"]);
       rows.push([`Generated on: ${new Date().toLocaleString('en-US', { hour12: false })}`]);
       rows.push([]);
 
@@ -361,7 +361,7 @@ export default function App() {
 
       // 2. Impurities Section
       if (result.degradationImpurities && result.degradationImpurities.length > 0) {
-        rows.push(["PREDICTED DEGRADATION IMPURITIES"]);
+        rows.push(["PREDICTED REACTION PRODUCTS & BYPRODUCTS"]);
         const hasEnergy = result.degradationImpurities.some(i => i.relativeEnergy != null);
         const hasBoth = result.degradationImpurities.some(i => i.probabilityHeuristic != null);
         
@@ -418,8 +418,8 @@ export default function App() {
       ];
       ws['!cols'] = wscols;
 
-      XLSX.utils.book_append_sheet(wb, ws, "Stability Report");
-      XLSX.writeFile(wb, `A-Pi1_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Interaction Report");
+      XLSX.writeFile(wb, `Interaction_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (err) {
       console.error('Excel Generation Error:', err);
       setError({ 
@@ -446,7 +446,7 @@ export default function App() {
       <header className="border-b bg-white sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight font-serif">A-Pi<span className="text-2xl">1</span></h1>
+            <h1 className="text-xl font-bold tracking-tight font-serif">INTERACTION</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-3 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
@@ -487,7 +487,7 @@ export default function App() {
             </div>
             
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-slate-800">Generating Possible Degradation Products...</h2>
+              <h2 className="text-2xl font-bold text-slate-800">Analyzing Chemical Interactions & Reaction Products...</h2>
             </div>
           </div>
         )}
@@ -497,7 +497,7 @@ export default function App() {
           <Card className="shadow-sm border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg font-serif">Input</CardTitle>
-              <CardDescription>Predict interactions and degradation pathways between compounds or analyze intrinsic stability.</CardDescription>
+              <CardDescription>Predict chemical interactions, reaction pathways, and byproducts between compounds or analyze intrinsic reactivity.</CardDescription>
               {error && (
                 <div className="pt-4">
                   <Alert variant="destructive" className="border-red-200 bg-red-50">
@@ -506,7 +506,7 @@ export default function App() {
                         {(error.type === "QUOTA_EXCEEDED" || error.type === "MODEL_OVERLOADED") && <Clock className="h-5 w-5 text-red-600 animate-pulse" />}
                         {error.type === "SAFETY_TRIGGERED" && <ShieldAlert className="h-5 w-5 text-red-600" />}
                         {error.type === "CONNECTION_ERROR" && <WifiOff className="h-5 w-5 text-red-600" />}
-                        {(error.type === "INVALID_SMILES" || error.type === "INVALID_SMARTS" || error.type === "INVALID_JSON") && <AlertCircle className="h-5 w-5 text-red-600" />}
+                        {(error.type === "INVALID_SMILES" || error.type === "INVALID_JSON") && <AlertCircle className="h-5 w-5 text-red-600" />}
                         {(error.type === "CONFIG_ERROR" || error.type === "PERMISSION_DENIED") && <Lock className="h-5 w-5 text-red-600" />}
                         {error.type === "UNKNOWN_ERROR" && <AlertTriangle className="h-5 w-5 text-red-600" />}
                       </div>
@@ -515,7 +515,7 @@ export default function App() {
                           {error.type === "QUOTA_EXCEEDED" ? "API Quota Exceeded" : 
                            error.type === "MODEL_OVERLOADED" ? "Model Temporarily Overloaded" :
                            error.type === "SAFETY_TRIGGERED" ? "Safety Filter Logic Engaged" :
-                           error.type === "INVALID_SMILES" || error.type === "INVALID_SMARTS" ? "Structural Format Error" :
+                           error.type === "INVALID_SMILES" ? "Chemical Structure Error" :
                            error.type === "CONNECTION_ERROR" ? "Network Communication Failure" :
                            error.type === "CONFIG_ERROR" ? "Configuration Credential Error" :
                            error.type === "PERMISSION_DENIED" ? "API Access Permission Denied" :
@@ -554,17 +554,15 @@ export default function App() {
                       </Label>
                     </div>
                     <Tabs value={compounds[0].type} onValueChange={(v) => updateCompound(0, "type", v as InputType)} className="w-full">
-                      <TabsList className="grid grid-cols-4 w-full h-7">
-                        <TabsTrigger value="Name" className="text-[9px]">Name</TabsTrigger>
-                        <TabsTrigger value="SMILES" className="text-[9px]">SMILES</TabsTrigger>
-                        <TabsTrigger value="SMARTS" className="text-[9px]">SMARTS</TabsTrigger>
-                        <TabsTrigger value="InChI" className="text-[9px]">InChI</TabsTrigger>
+                      <TabsList className="grid grid-cols-2 w-full h-7">
+                        <TabsTrigger value="Name" className="text-xs font-medium">Name</TabsTrigger>
+                        <TabsTrigger value="SMILES" className="text-xs font-medium">SMILES</TabsTrigger>
                       </TabsList>
                     </Tabs>
                     <div className="relative">
                       <Input 
                         id={`compound-0`} 
-                        placeholder={compounds[0].type === "Name" ? "e.g., Aspirin" : `Enter ${compounds[0].type}...`}
+                        placeholder={compounds[0].type === "Name" ? "e.g., Aspirin" : "Enter SMILES notation (e.g. CC(=O)Oc1ccccc1C(=O)O)..."}
                         value={compounds[0].value}
                         autoComplete="off"
                         onChange={(e) => {
@@ -623,16 +621,14 @@ export default function App() {
                               </Button>
                             </div>
                             <Tabs value={c.type} onValueChange={(v) => updateCompound(actualIndex, "type", v as InputType)} className="w-full">
-                              <TabsList className="grid grid-cols-4 w-full h-6">
-                                <TabsTrigger value="Name" className="text-[8px]">Name</TabsTrigger>
-                                <TabsTrigger value="SMILES" className="text-[8px]">SMILES</TabsTrigger>
-                                <TabsTrigger value="SMARTS" className="text-[8px]">SMARTS</TabsTrigger>
-                                <TabsTrigger value="InChI" className="text-[8px]">InChI</TabsTrigger>
+                              <TabsList className="grid grid-cols-2 w-full h-6">
+                                <TabsTrigger value="Name" className="text-[10px] font-medium">Name</TabsTrigger>
+                                <TabsTrigger value="SMILES" className="text-[10px] font-medium">SMILES</TabsTrigger>
                               </TabsList>
                             </Tabs>
                             <div className="relative">
                               <Input 
-                                placeholder={c.type === "Name" ? "e.g., Lactose" : `Enter ${c.type}...`}
+                                placeholder={c.type === "Name" ? "e.g., Lactose" : "Enter SMILES notation..."}
                                 value={c.value}
                                 autoComplete="off"
                                 onChange={(e) => {
@@ -693,10 +689,10 @@ export default function App() {
                         <TooltipContent className="max-w-xs p-3 bg-white border border-slate-200 shadow-xl rounded-xl">
                           <div className="space-y-2">
                             <p className="text-xs font-bold text-indigo-900">Heuristic/AI</p>
-                            <p className="text-[10px] text-slate-600 leading-relaxed">Uses expert pharmaceutical reasoning and reaction kinetics to identify reactive sites and rank outcomes.</p>
+                            <p className="text-[10px] text-slate-600 leading-relaxed">Uses chemical reaction mechanism reasoning and kinetics to identify reactive sites and rank outcomes.</p>
                             <div className="h-px bg-slate-100" />
                             <p className="text-xs font-bold text-indigo-900">Boltzmann/Physics</p>
-                            <p className="text-[10px] text-slate-600 leading-relaxed">Uses thermodynamic stability principles and provides relative formation energy (ΔG) for each predicted impurity.</p>
+                            <p className="text-[10px] text-slate-600 leading-relaxed">Uses thermodynamic stability principles and provides relative formation energy (ΔG) for each predicted product.</p>
                           </div>
                         </TooltipContent>
                       </Tooltip>
@@ -756,7 +752,7 @@ export default function App() {
                   ) : (
                     <>
                       <Search className="mr-2 h-4 w-4" />
-                      Predict Interaction and Degradation
+                      Predict Chemical Interactions
                     </>
                   )}
                 </Button>
@@ -886,7 +882,7 @@ export default function App() {
                       <Separator />
                       <section className="space-y-4">
                         <h4 className="text-sm font-semibold flex items-center gap-2 text-[#0f172a]">
-                          Predicted Degradation Impurities
+                          Predicted Reaction Products & Byproducts
                         </h4>
                         <div className="grid grid-cols-1 gap-6">
                           {(!result.degradationImpurities || result.degradationImpurities.length === 0) ? (
@@ -990,7 +986,7 @@ export default function App() {
                   </CardContent>
                   <CardFooter className="bg-[#fcfcfc] border-t py-4">
                     <p className="text-[10px] text-[#94a3b8] italic">
-                      Disclaimer: This prediction is generated by an AI model and should be used for research purposes only. Always verify with experimental data and professional pharmaceutical consultation.
+                      Disclaimer: This prediction is generated by an AI model and should be used for chemical research purposes only. Always verify with experimental data and validated analytical methods.
                     </p>
                   </CardFooter>
                 </Card>
@@ -1002,7 +998,7 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t py-6 bg-white">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
-          <p>© 2026 A-Pi1 Research Lab. All rights reserved.</p>
+          <p>© 2026 INTERACTION Lab. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-foreground transition-colors">Documentation</a>
             <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>

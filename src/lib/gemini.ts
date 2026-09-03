@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { parse as parsePartial } from 'partial-json';
-import { validateSmiles, validateSmarts, MolecularDescriptors } from "./rdkit";
+import { validateSmiles, MolecularDescriptors } from "./rdkit";
 
 const getApiKey = () => {
   // Check runtime globals, URL query parameters, and local storage first
@@ -69,7 +69,7 @@ export interface PredictionResult {
 
 export type PredictionMethod = "Boltzmann" | "Heuristic" | "Both";
 
-export type InputType = "Name" | "SMILES" | "SMARTS" | "InChI";
+export type InputType = "Name" | "SMILES";
 
 export class AnalysisError extends Error {
   constructor(public message: string, public type: string) {
@@ -102,12 +102,6 @@ export async function predictInteraction(
       if (validation.canonicalSmiles) {
         input.value = validation.canonicalSmiles;
       }
-    } else if (input.type === "SMARTS") {
-      const smarts = input.value.trim();
-      const validation = await validateSmarts(smarts);
-      if (!validation.isValid) {
-        throw new AnalysisError(validation.error || "Invalid SMARTS pattern", "INVALID_SMARTS");
-      }
     }
   }
 
@@ -134,13 +128,13 @@ export async function predictInteraction(
   }
 
   const impurityProperties: any = {
-    iupacName: { type: Type.STRING, description: "The IUPAC name or common name of the NEW DEGRADATION PRODUCT. DO NOT just output the parent compound name. You must name the new impurity generated." },
+    iupacName: { type: Type.STRING, description: "The IUPAC name or common name of the NEW REACTION OR DEGRADATION PRODUCT. DO NOT just output the parent compound name. You must name the new product generated." },
     smiles: { 
       type: Type.STRING, 
-      description: "SMILES string of the newly formed degradant. CRITICAL WARNING: You must mathematically ensure standard valence rules are obeyed. Do not attach 5 bonds to Carbon. RDKit will fail to parse this if valences are exceeded."
+      description: "SMILES string of the newly formed product. CRITICAL WARNING: You must mathematically ensure standard valence rules are obeyed. Do not attach 5 bonds to Carbon. RDKit will fail to parse this if valences are exceeded."
     },
     structureDescription: { type: Type.STRING },
-    origin: { type: Type.STRING, description: "Which specific compound(s) this impurity originated from. E.g. 'Compound 1 and Compound 2'" },
+    origin: { type: Type.STRING, description: "Which specific compound(s) this product originated from. E.g. 'Compound 1 and Compound 2'" },
     probability: { 
       type: Type.NUMBER, 
       description: "Primary probability of formation as a decimal between 0.0 and 1.0 (e.g., 0.85 for 85%). Used for ranking." 
@@ -191,21 +185,21 @@ export async function predictInteraction(
         const ai = getAiClient();
         const responseStream = await ai.models.generateContentStream({
           model: activeModel,
-          contents: `Predict and evaluate the degradation of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
+          contents: `Predict and evaluate the chemical interaction and reaction products of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
           config: {
             temperature: 0.1,
-            systemInstruction: `You are a professional pharmaceutical degradation evaluator. 
-        Your task is to predict the degradation of Compound 1 using the following analytical framework${method === "Both" ? "s" : ""}:
+            systemInstruction: `You are an expert computational chemist and reaction mechanism evaluator. 
+        Your task is to predict the chemical interaction and transformation products of Compound 1 using the following analytical framework${method === "Both" ? "s" : ""}:
         ${method === "Heuristic" || method === "Both" ? "\n        1. HEURISTIC ANALYSIS: Based on expert chemical reasoning, reactive site identification, and known reaction kinetics." : ""}
         ${method === "Boltzmann" || method === "Both" ? `\n        ${method === "Both" ? "2." : "1."} BOLTZMANN ANALYSIS: Based on thermodynamic stability and calculated relative formation energy (ΔG) at 298.15K.` : ""}
         
-        ${method === "Both" ? "When \"Both\" is selected, you must perform these two analyses independently for each predicted impurity to provide a comparative perspective." : ""}
+        ${method === "Both" ? "When \"Both\" is selected, you must perform these two analyses independently for each predicted product to provide a comparative perspective." : ""}
         
-        Evaluate the degradation of Compound 1 due to:
-        1. Stress degradation of Compound 1.
-        2. Interactions between Compound 1 and any other provided compounds (Compounds 2-5).
+        Evaluate the chemical reactivity and transformation of Compound 1 due to:
+        1. Direct degradation / intrinsic reactivity of Compound 1.
+        2. Chemical interactions between Compound 1 and any other provided co-reactants (Compounds 2-5).
         
-        You MUST evaluate degradation under these specific conditions:
+        You MUST evaluate reactivity under these specific conditions:
         - Oxidation
         - Acidic Hydrolysis
         - Basic Hydrolysis
@@ -217,18 +211,18 @@ export async function predictInteraction(
         - Identified name (If the user explicitly provided a name, you MUST echo their exact original name back to them. DO NOT rename it to IUPAC or another common name).
         - SMILES string (MUST be a valid, standard, canonical SMILES string compatible with RDKit and PubChem).
         - List of key structural features.
-        - List of specific "Interaction Sites" likely to be involved in degradation.
+        - List of specific "Interaction Sites" likely to be involved in reaction or degradation.
         
-        Predict exactly 10 possible degradation impurities or interaction products derived from Compound 1.
+        Predict exactly 10 possible reaction byproducts, degradation products, or interaction adducts derived from Compound 1.
         For each product, you MUST specify:
-        - Whether it forms from "Stress degradation" or "Interaction with other compound".
+        - Whether it forms from "Direct degradation" or "Interaction with other compound".
         - Which specific condition it forms under.
-        - IUPAC name of the NEW DEGRADANT (do NOT just repeat the starting material's name. You must identify the unique name of the resulting product).
-        - SMILES string of the new degradant. CRITICAL: This MUST be a valid, canonical SMILES string. You MUST implicitly verify that standard valences are not exceeded (e.g. Carbon max 4 bonds, Oxygen max 2 bonds, Nitrogen max 3 or 4 if charged) so that RDKit can successfully parse and render it. Invalid SMILES will break the UI renderer. If uncertain, simplify the resulting structure to ensure valence validity.
-        - A brief explanation of the underlying mechanism (mechanismExplanation), including specific phenomena like pH changes, oxidation, complexation, adsorption, precipitation, or effects on stability and release kinetics.
+        - IUPAC name of the NEW PRODUCT (do NOT just repeat the starting material's name. You must identify the unique name of the resulting product).
+        - SMILES string of the new product. CRITICAL: This MUST be a valid, canonical SMILES string. You MUST implicitly verify that standard valences are not exceeded (e.g. Carbon max 4 bonds, Oxygen max 2 bonds, Nitrogen max 3 or 4 if charged) so that RDKit can successfully parse and render it. Invalid SMILES will break the UI renderer. If uncertain, simplify the resulting structure to ensure valence validity.
+        - A brief explanation of the underlying mechanism (mechanismExplanation), including specific phenomena like pH changes, oxidation, complexation, addition, substitution, rearrangement, or precipitation.
         - ${probabilityInstruction}
         
-        IMPORTANT: Probabilities MUST be realistic estimates between 0.01 and 0.99. DO NOT return 0.0 unless the impurity is chemically impossible.
+        IMPORTANT: Probabilities MUST be realistic estimates between 0.01 and 0.99. DO NOT return 0.0 unless the product is chemically impossible.
         
         Rank the products by their calculated Boltzmann probability (if available) or general probability.`,
             responseMimeType: "application/json",
@@ -237,7 +231,7 @@ export async function predictInteraction(
               properties: {
                 chainOfThought: {
                   type: Type.STRING,
-                  description: `Perform your step-by-step chemical reasoning, mechanism formulation${method !== "Heuristic" ? ", and energy estimation" : ""} here BEFORE outputting the final compounds.`
+                  description: `Perform your step-by-step chemical reasoning, reaction pathway derivation${method !== "Heuristic" ? ", and energy estimation" : ""} here BEFORE outputting the final compounds.`
                 },
                 compounds: {
                   type: Type.ARRAY,
