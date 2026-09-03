@@ -52,7 +52,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
-  const [selectedMethods, setSelectedMethods] = useState<Set<"Heuristic" | "Boltzmann">>(new Set(["Heuristic"]));
   const [user, setUser] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<number | null>(null);
@@ -136,21 +135,8 @@ export default function App() {
     setShowSuggestions(null);
   };
 
-  const toggleMethod = (method: "Heuristic" | "Boltzmann") => {
-    const newMethods = new Set(selectedMethods);
-    if (newMethods.has(method)) {
-      newMethods.delete(method);
-    } else {
-      newMethods.add(method);
-    }
-    setSelectedMethods(newMethods);
-  };
-
-  const predictionMethod: PredictionMethod = 
-    selectedMethods.size === 2 ? "Both" : 
-    selectedMethods.has("Boltzmann") ? "Boltzmann" : 
-    selectedMethods.has("Heuristic") ? "Heuristic" : 
-    "Heuristic";
+  const [predictionMethod, setPredictionMethod] = useState<PredictionMethod>("Both");
+  const [activeTab, setActiveTab] = useState<"products" | "reactants" | "reasoning">("products");
 
   const addCompound = () => {
     if (compounds.length < 5) {
@@ -441,65 +427,53 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-white sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight font-serif">INTERACTION</h1>
+      <div className="min-h-screen bg-white flex flex-col font-sans">
+      {/* Header Matching Streamlit */}
+      <header className="border-b border-[#E2E8F0] bg-white sticky top-0 z-20">
+        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+          <div>
+            <h1 className="font-serif text-3xl font-extrabold text-[#0F172A] tracking-tight">INTERACTION</h1>
+            <p className="text-xs sm:text-sm font-semibold text-[#64748B]">Chemical Interaction & Byproduct Prediction Engine</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-3 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <Database className="w-3 h-3 text-indigo-500" />
-                <span className="text-[10px] font-medium text-slate-500">{dbStats.compounds} Compounds</span>
-              </div>
-              <Separator orientation="vertical" className="h-3 bg-slate-200" />
-              <div className="flex items-center gap-1.5">
-                <History className="w-3 h-3 text-emerald-500" />
-                <span className="text-[10px] font-medium text-slate-500">{dbStats.predictions} Predictions</span>
-              </div>
+          <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 bg-[#F8FAFC] rounded-full border border-[#E2E8F0]">
+            <div className="flex items-center gap-1.5">
+              <Database className="w-3.5 h-3.5 text-[#4F46E5]" />
+              <span className="text-xs font-semibold text-[#475569]">{dbStats.compounds} Compounds</span>
+            </div>
+            <Separator orientation="vertical" className="h-3.5 bg-[#E2E8F0]" />
+            <div className="flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-[#059669]" />
+              <span className="text-xs font-semibold text-[#475569]">{dbStats.predictions} Predictions</span>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-
-      <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full relative">
+      <main className="flex-1 max-w-[1120px] mx-auto px-4 sm:px-6 py-6 w-full relative">
+        {/* Loading View Matching Streamlit */}
         {view === 'loading' && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
-            <div className="relative w-32 h-32 flex items-center justify-center mb-8">
-              {/* Nucleus */}
-              <div className="w-8 h-8 bg-indigo-600 rounded-full shadow-[0_0_30px_#4f46e5] z-10" />
-              
-              {/* Orbit Path */}
-              <div className="absolute w-24 h-24 border-2 border-slate-100 rounded-full" />
-              
-              {/* Electron Container (Rotates) */}
-              <motion.div 
-                className="absolute w-24 h-24"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-              >
-                {/* The Electron */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-indigo-400 rounded-full shadow-[0_0_15px_#818cf8]" />
-              </motion.div>
-            </div>
-            
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-slate-800">Analyzing Chemical Interactions & Reaction Products...</h2>
-            </div>
+          <div className="py-20 px-4 text-center max-w-xl mx-auto">
+            <div className="inline-block w-14 h-14 border-4 border-[#EEF2FF] border-t-[#4F46E5] rounded-full animate-spin mb-6"></div>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#0F172A] mb-3">
+              Computing Reaction Products & Transformation Pathways...
+            </h2>
+            <p className="text-[#64748B] text-sm leading-relaxed">
+              Analyzing electrophilic and nucleophilic reactive centers, evaluating transition state kinetic activation barriers, and calculating Boltzmann thermodynamic free energies (ΔG).
+            </p>
           </div>
         )}
         
+        {/* Input View Matching Streamlit */}
         {view === 'input' && (
-          <div className="w-full max-w-3xl mx-auto space-y-6">
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-serif">Input</CardTitle>
-              <CardDescription>Predict chemical interactions, reaction pathways, and byproducts between compounds or analyze intrinsic reactivity.</CardDescription>
+          <div className="w-full space-y-6">
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+              <div className="mb-6">
+                <h2 className="font-serif text-2xl font-bold text-[#0F172A] mb-1">Reaction Mixture Setup</h2>
+                <p className="text-sm text-[#64748B]">Define the primary chemical compound and optional secondary co-reactants or additives.</p>
+              </div>
+
               {error && (
-                <div className="pt-4">
+                <div className="mb-6">
                   <Alert variant="destructive" className="border-red-200 bg-red-50">
                     <div className="flex gap-3">
                       <div className="mt-0.5">
@@ -541,28 +515,26 @@ export default function App() {
                   </Alert>
                 </div>
               )}
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePredict} className="space-y-6" autoComplete="off">
-                <div className="space-y-6">
-                  {/* Primary Compound Tile */}
-                  <div className="space-y-3 p-4 bg-[#f5f7ff] rounded-xl border border-indigo-100 relative group">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={`compound-0`} className="font-bold text-indigo-900 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                        Primary Compound
-                      </Label>
-                    </div>
-                    <Tabs value={compounds[0].type} onValueChange={(v) => updateCompound(0, "type", v as InputType)} className="w-full">
-                      <TabsList className="grid grid-cols-2 w-full h-7">
-                        <TabsTrigger value="Name" className="text-xs font-medium">Name</TabsTrigger>
-                        <TabsTrigger value="SMILES" className="text-xs font-medium">SMILES</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                    <div className="relative">
-                      <Input 
-                        id={`compound-0`} 
-                        placeholder={compounds[0].type === "Name" ? "e.g., Aspirin" : "Enter SMILES notation (e.g. CC(=O)Oc1ccccc1C(=O)O)..."}
+
+              <form onSubmit={handlePredict} autoComplete="off">
+                {/* Section: Primary Compound */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 text-sm font-bold text-[#312E81] mb-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-[#4F46E5]"></span>
+                    Primary Compound
+                  </div>
+                  <div className="flex gap-3">
+                    <select
+                      value={compounds[0].type}
+                      onChange={(e) => updateCompound(0, "type", e.target.value as InputType)}
+                      className="w-28 h-10 px-3 text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#334155] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                    >
+                      <option value="Name">Name</option>
+                      <option value="SMILES">SMILES</option>
+                    </select>
+                    <div className="relative flex-1">
+                      <input 
+                        placeholder={compounds[0].type === "Name" ? "e.g. Aspirin or CC(=O)Oc1ccccc1C(=O)O" : "e.g. CC(=O)Oc1ccccc1C(=O)O"}
                         value={compounds[0].value}
                         autoComplete="off"
                         onChange={(e) => {
@@ -576,433 +548,453 @@ export default function App() {
                           }
                         }}
                         required
-                        className="bg-white h-9 text-sm border-indigo-100 focus-visible:ring-indigo-500"
+                        className="w-full h-10 px-3.5 text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
                       />
                       {showSuggestions === 0 && suggestions.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
                           {suggestions.map((s, i) => (
                             <button
                               key={i}
                               type="button"
-                              className="w-full text-left px-4 py-2 text-xs hover:bg-indigo-50 border-b border-slate-50 last:border-0"
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-[#EEF2FF] border-b border-[#F1F5F9] last:border-0"
                               onClick={() => handleSuggestionSelect(0, s)}
                             >
-                              <div className="font-bold text-slate-700">{s.name}</div>
-                              <div className="text-[10px] text-slate-400 truncate">{s.smiles}</div>
+                              <div className="font-bold text-[#0F172A]">{s.name}</div>
+                              <div className="text-[10px] text-[#64748B] truncate">{s.smiles}</div>
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
                   </div>
-
-                  {/* Secondary Compounds Tile */}
-                  <div className="space-y-4 p-4 bg-[#f8fafc] rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-semibold text-slate-700">Secondary Compounds</Label>
-                      <Badge variant="outline" className="text-[9px] font-mono text-slate-400">{compounds.length - 1} Added</Badge>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {compounds.slice(1).map((c, idx) => {
-                        const actualIndex = idx + 1;
-                        return (
-                          <div key={`input-compound-${actualIndex}`} className="space-y-3 relative group">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Secondary Compound {idx + 1}</span>
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-5 w-5 text-slate-300 hover:text-red-500"
-                                onClick={() => removeCompound(actualIndex)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <Tabs value={c.type} onValueChange={(v) => updateCompound(actualIndex, "type", v as InputType)} className="w-full">
-                              <TabsList className="grid grid-cols-2 w-full h-6">
-                                <TabsTrigger value="Name" className="text-[10px] font-medium">Name</TabsTrigger>
-                                <TabsTrigger value="SMILES" className="text-[10px] font-medium">SMILES</TabsTrigger>
-                              </TabsList>
-                            </Tabs>
-                            <div className="relative">
-                              <Input 
-                                placeholder={c.type === "Name" ? "e.g., Lactose" : "Enter SMILES notation..."}
-                                value={c.value}
-                                autoComplete="off"
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  updateCompound(actualIndex, "value", val);
-                                  setError(null);
-                                  
-                                  if (c.type === "Name" && val.length > 1) {
-                                    setShowSuggestions(actualIndex);
-                                  } else {
-                                    setShowSuggestions(null);
-                                  }
-                                }}
-                                className="bg-white h-8 text-xs"
-                              />
-                              {showSuggestions === actualIndex && suggestions.length > 0 && (
-                                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
-                                  {suggestions.map((s, i) => (
-                                    <button
-                                      key={i}
-                                      type="button"
-                                      className="w-full text-left px-4 py-2 text-xs hover:bg-indigo-50 border-b border-slate-50 last:border-0"
-                                      onClick={() => handleSuggestionSelect(actualIndex, s)}
-                                    >
-                                      <div className="font-bold text-slate-700">{s.name}</div>
-                                      <div className="text-[10px] text-slate-400 truncate">{s.smiles}</div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {compounds.length < 5 && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        className="w-full border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 h-9 text-xs"
-                        onClick={addCompound}
-                      >
-                        <Plus className="mr-2 h-3.5 w-3.5" />
-                        Add Secondary Compound
-                      </Button>
-                    )}
-                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prediction Method</Label>
-                    <Tooltip>
-                      <TooltipTrigger className="text-slate-400 hover:text-indigo-500 transition-colors flex items-center justify-center">
-                        <Info className="w-3.5 h-3.5" />
-                      </TooltipTrigger>
-                        <TooltipContent className="max-w-xs p-3 bg-white border border-slate-200 shadow-xl rounded-xl">
-                          <div className="space-y-2">
-                            <p className="text-xs font-bold text-indigo-900">Heuristic/AI</p>
-                            <p className="text-[10px] text-slate-600 leading-relaxed">Uses chemical reaction mechanism reasoning and kinetics to identify reactive sites and rank outcomes.</p>
-                            <div className="h-px bg-slate-100" />
-                            <p className="text-xs font-bold text-indigo-900">Boltzmann/Physics</p>
-                            <p className="text-[10px] text-slate-600 leading-relaxed">Uses thermodynamic stability principles and provides relative formation energy (ΔG) for each predicted product.</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
+                {/* Section: Secondary Compounds */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#334155]">
+                      <span className="inline-block w-2 h-2 rounded-full bg-[#94A3B8]"></span>
+                      Secondary Compounds (Co-reactants / Additives)
+                    </div>
+                    <span className="font-mono text-xs text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded">
+                      {compounds.slice(1).filter(c => c.value.trim()).length} Added
+                    </span>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleMethod("Heuristic")}
-                      className={`flex-1 flex items-center gap-2.5 p-2.5 rounded-xl border transition-all text-left ${
-                        selectedMethods.has("Heuristic")
-                          ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200"
-                          : "bg-white border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      <div className={`shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${
-                        selectedMethods.has("Heuristic") ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-300"
-                      }`}>
-                        {selectedMethods.has("Heuristic") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className={`text-xs font-bold truncate ${selectedMethods.has("Heuristic") ? "text-indigo-900" : "text-slate-700"}`}>Heuristic/AI</div>
-                        <div className="text-[9px] text-slate-500 truncate">Expert Reasoning</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleMethod("Boltzmann")}
-                      className={`flex-1 flex items-center gap-2.5 p-2.5 rounded-xl border transition-all text-left ${
-                        selectedMethods.has("Boltzmann")
-                          ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200"
-                          : "bg-white border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      <div className={`shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${
-                        selectedMethods.has("Boltzmann") ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-300"
-                      }`}>
-                        {selectedMethods.has("Boltzmann") && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className={`text-xs font-bold truncate ${selectedMethods.has("Boltzmann") ? "text-indigo-900" : "text-slate-700"}`}>Boltzmann/Physics</div>
-                        <div className="text-[9px] text-slate-500 truncate">Thermodynamic (ΔG)</div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full h-11" 
-                  disabled={loading || compounds.every(c => c.value.trim() === "")}
-                >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      Predict Chemical Interactions
-                    </>
+                  <div className="space-y-3 mb-4">
+                    {compounds.slice(1).map((c, idx) => {
+                      const actualIndex = idx + 1;
+                      return (
+                        <div key={`sec-${actualIndex}`} className="flex items-center gap-3">
+                          <select
+                            value={c.type}
+                            onChange={(e) => updateCompound(actualIndex, "type", e.target.value as InputType)}
+                            className="w-28 h-10 px-3 text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#334155] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                          >
+                            <option value="Name">Name</option>
+                            <option value="SMILES">SMILES</option>
+                          </select>
+                          <div className="relative flex-1">
+                            <input
+                              placeholder="e.g. Magnesium Stearate or Lactose"
+                              value={c.value}
+                              autoComplete="off"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateCompound(actualIndex, "value", val);
+                                setError(null);
+                                if (c.type === "Name" && val.length > 1) {
+                                  setShowSuggestions(actualIndex);
+                                } else {
+                                  setShowSuggestions(null);
+                                }
+                              }}
+                              className="w-full h-10 px-3.5 text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                            />
+                            {showSuggestions === actualIndex && suggestions.length > 0 && (
+                              <div className="absolute z-50 w-full mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                                {suggestions.map((s, i) => (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    className="w-full text-left px-4 py-2 text-xs hover:bg-[#EEF2FF] border-b border-[#F1F5F9] last:border-0"
+                                    onClick={() => handleSuggestionSelect(actualIndex, s)}
+                                  >
+                                    <div className="font-bold text-[#0F172A]">{s.name}</div>
+                                    <div className="text-[10px] text-[#64748B] truncate">{s.smiles}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeCompound(actualIndex)}
+                            title="Remove compound"
+                            className="w-10 h-10 flex items-center justify-center text-[#94A3B8] hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-colors text-sm font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {compounds.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={addCompound}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#CBD5E1] bg-white text-[#334155] hover:bg-[#F8FAFC] text-xs font-semibold rounded-lg shadow-xs transition-colors"
+                    >
+                      + Add Secondary Compound
+                    </button>
                   )}
-                </Button>
+                </div>
+
+                {/* Section: Prediction Method */}
+                <div className="mb-6">
+                  <div className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2.5">
+                    Prediction Engine & Methodology:
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { id: "Both", title: "Dual Engine (Heuristic Kinetic Rules + Boltzmann Thermodynamic ΔG)" },
+                      { id: "Heuristic", title: "Heuristic / AI (Expert Kinetic Activation & Transition States)" },
+                      { id: "Boltzmann", title: "Boltzmann / Physics (Thermodynamic Free Energy ΔG Distribution at 298.15K)" }
+                    ].map((opt) => (
+                      <label
+                        key={opt.id}
+                        onClick={() => setPredictionMethod(opt.id as PredictionMethod)}
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          predictionMethod === opt.id
+                            ? "bg-[#EEF2FF] border-[#818CF8] text-[#312E81] shadow-xs"
+                            : "bg-white border-[#E2E8F0] hover:border-[#CBD5E1] text-[#334155]"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          predictionMethod === opt.id ? "border-[#4F46E5] bg-[#4F46E5]" : "border-[#94A3B8] bg-white"
+                        }`}>
+                          {predictionMethod === opt.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        </div>
+                        <span className="text-xs sm:text-sm font-semibold">{opt.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit CTA Button */}
+                <button
+                  type="submit"
+                  disabled={loading || compounds.every(c => c.value.trim() === "")}
+                  className="w-full py-3 px-6 bg-[#4F46E5] hover:bg-[#4338CA] disabled:opacity-50 text-white font-semibold text-base rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2"
+                >
+                  <span>🧪</span> Predict Chemical Interactions
+                </button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
           </div>
         )}
 
-        {/* View: Results */}
+        {/* View: Results Dashboard Matching Streamlit */}
         {view === 'results' && result && !loading && (
-          <div className="w-full max-w-5xl mx-auto space-y-6">
-            <Button variant="ghost" className="mb-4" onClick={() => {
-              setView('input');
-              // Clear result when returning to input to prevent flashing old results later
-              setResult(null);
-            }}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Input
-            </Button>
-                <div className="flex justify-end">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={downloadExcel}
-                    className="bg-white border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Excel Report
-                  </Button>
+          <div className="w-full space-y-6">
+            {/* Action Toolbar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <button
+                onClick={() => { setView('input'); setResult(null); }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-semibold text-sm rounded-lg transition-colors shadow-xs"
+              >
+                ← Back to Reaction Setup
+              </button>
+              <button
+                onClick={downloadExcel}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold text-sm rounded-lg transition-colors shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Download Excel Interaction Report
+              </button>
+            </div>
+
+            {/* Executive Summary Metrics */}
+            {(() => {
+              const impurities = result.degradationImpurities || [];
+              const maxProb = impurities.length > 0 ? Math.max(...impurities.map(i => i.probability || 0)) : 0;
+              const energies = impurities.map(i => i.relativeEnergy).filter((e): e is number => e != null);
+              const minEnergy = energies.length > 0 ? Math.min(...energies) : null;
+
+              return (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4">
+                    <div className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Reaction Products</div>
+                    <div className="text-2xl font-extrabold text-[#0F172A]">{impurities.length}</div>
+                    <div className="text-[10px] text-[#94A3B8] mt-1">Total identified transformation products</div>
+                  </div>
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4">
+                    <div className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Highest Probability</div>
+                    <div className="text-2xl font-extrabold text-[#4F46E5]">{(maxProb * 100).toFixed(1)}%</div>
+                    <div className="text-[10px] text-[#94A3B8] mt-1">Maximum formation likelihood</div>
+                  </div>
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4">
+                    <div className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Interaction Nature</div>
+                    <div className="text-2xl font-extrabold text-[#0F172A]">{result.interactionType || "Chemical"}</div>
+                    <div className="text-[10px] text-[#94A3B8] mt-1">Dominant interaction classification</div>
+                  </div>
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4">
+                    <div className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Lowest ΔG (Driving Force)</div>
+                    <div className="text-2xl font-extrabold text-[#0F172A] font-mono">
+                      {minEnergy !== null ? `${minEnergy.toFixed(2)} kcal/mol` : "Calculated"}
+                    </div>
+                    <div className="text-[10px] text-[#94A3B8] mt-1">Most exergonic thermodynamic pathway</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Tabbed Analytical Views Matching Streamlit */}
+            <div className="border-b border-[#E2E8F0] flex gap-2 pt-2">
+              <button
+                onClick={() => setActiveTab("products")}
+                className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors flex items-center gap-1.5 ${
+                  activeTab === "products"
+                    ? "bg-[#EEF2FF] text-[#4F46E5] border-b-2 border-[#4F46E5]"
+                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                <span>🔬</span> Predicted Reaction Products
+              </button>
+              <button
+                onClick={() => setActiveTab("reactants")}
+                className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors flex items-center gap-1.5 ${
+                  activeTab === "reactants"
+                    ? "bg-[#EEF2FF] text-[#4F46E5] border-b-2 border-[#4F46E5]"
+                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                <span>🧪</span> Reactants & Components
+              </button>
+              <button
+                onClick={() => setActiveTab("reasoning")}
+                className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors flex items-center gap-1.5 ${
+                  activeTab === "reasoning"
+                    ? "bg-[#EEF2FF] text-[#4F46E5] border-b-2 border-[#4F46E5]"
+                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                <span>🧠</span> AI Mechanistic Framework
+              </button>
+            </div>
+
+            {/* Tab 1: Predicted Products */}
+            {activeTab === "products" && (
+              <div className="space-y-4">
+                <div className="my-2">
+                  <h3 className="font-serif text-xl font-bold text-[#0F172A] mb-1">
+                    Predicted Reaction Byproducts & Degradation Products
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#64748B]">
+                    Ranked by formation probability and thermodynamic stability under specified reaction conditions.
+                  </p>
                 </div>
 
-                <div ref={reportRef} className="space-y-6 bg-white p-1 rounded-xl">
-                  <Card className="border-slate-200 overflow-hidden">
-                  <CardHeader className="bg-[#f8fafc] relative pb-10">
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2">
-                      <Badge variant="outline" className="py-1 px-6 text-xs font-bold uppercase tracking-[0.2em] bg-white border-slate-200 text-[#64748b]">
-                        Input
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-4 pt-8">
-                      {(!result.compounds || result.compounds.length === 0 ? compounds.filter(c => c.value.trim() !== "") : result.compounds).map((compound, idx) => (
-                        <div key={`compound-${idx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col md:flex-row items-center md:items-stretch min-h-[192px]">
-                          <div className="w-full md:w-48 h-48 bg-slate-50 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 p-4 relative">
-                            {('smiles' in compound && compound.smiles) ? (
-                              <ChemicalStructure 
-                                smiles={compound.smiles as string} 
-                                width={160} 
-                                height={160} 
-                              />
-                            ) : (
-                              <div className="animate-pulse bg-slate-200 h-24 w-24 rounded-full opacity-50" />
-                            )}
-                            <div className="absolute top-3 left-3 bg-[#f1f5f9] text-slate-500 text-[10px] font-bold px-2 py-1 rounded-sm">
-                              C{idx + 1}
+                {(!result.degradationImpurities || result.degradationImpurities.length === 0) ? (
+                  <div className="p-8 text-center bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#64748B]">
+                    No significant byproducts detected under standard conditions.
+                  </div>
+                ) : (
+                  [...result.degradationImpurities]
+                    .sort((a, b) => (b.probability || 0) - (a.probability || 0))
+                    .map((imp, idx) => {
+                      const prob = (imp.probability || 0) * 100;
+                      const cond = imp.condition || "Direct Degradation";
+                      let condClass = "cond-hydro";
+                      const condLower = cond.toLowerCase();
+                      if (condLower.includes("oxid")) condClass = "cond-oxid";
+                      else if (condLower.includes("therm")) condClass = "cond-therm";
+                      else if (condLower.includes("photo")) condClass = "cond-photo";
+                      else if (condLower.includes("react") || condLower.includes("incomp")) condClass = "cond-react";
+
+                      return (
+                        <div key={`prod-${idx}`} className="ap1-imp-card flex-col sm:flex-row">
+                          <div className="ap1-imp-svg">
+                            <div className="absolute top-3 left-3 bg-[#F1F5F9] text-[#475569] text-xs font-extrabold px-2 py-0.5 rounded">
+                              #{idx + 1}
                             </div>
+                            {imp.smiles ? (
+                              <ChemicalStructure smiles={imp.smiles} width={220} height={220} />
+                            ) : (
+                              <div className="w-40 h-40 bg-slate-100 rounded-lg animate-pulse" />
+                            )}
                           </div>
-                          <div className="p-6 flex-1 flex flex-col justify-center space-y-3">
-                            <div className="flex items-center gap-3">
-                              <div className="font-serif text-2xl font-bold text-[#0f172a] leading-tight">
-                                {('name' in compound && compound?.name) ? compound.name : <div className="h-6 w-32 bg-slate-200 animate-pulse rounded" />}
-                              </div>
-                              <Badge variant="outline" className={`text-[10px] font-mono border-slate-100 ${idx === 0 ? 'text-[#4f46e5] bg-[#f5f7ff] border-indigo-100' : 'text-[#94a3b8]'}`}>
-                                {idx === 0 ? 'Primary Compound' : `Secondary Compound ${idx}`}
-                              </Badge>
-                            </div>
-                            
-                            {('smiles' in compound && compound.smiles) ? (
-                               <div className="font-mono text-[11px] text-[#94a3b8] break-all leading-relaxed" title={compound.smiles}>{compound.smiles}</div>
-                            ) : (
-                               <div className="h-4 w-48 bg-slate-100 animate-pulse rounded" />
-                            )}
-                            
-                            <div className="flex flex-wrap gap-2 pt-2">
-                              {('molecularDescriptors' in compound && compound?.molecularDescriptors) && (
-                                <Badge variant="outline" className="bg-[#f8fafc] text-[#64748b] border-slate-200 text-[10px] py-0 px-2 font-mono">
-                                  Molecular Weight: {compound.molecularDescriptors.MolWt != null ? compound.molecularDescriptors.MolWt.toFixed(2) : "N/A"}
-                                </Badge>
-                              )}
-                              {('features' in compound && compound?.features && compound.features.length > 0) ? compound.features.map((feature, i) => (
-                                <Badge key={`feature-${idx}-${i}`} variant="outline" className="bg-[#f8fafc] text-[#475569] border-slate-200 text-[10px] py-0 px-2">
-                                  {feature}
-                                </Badge>
-                              )) : (
-                                (!('features' in compound)) && (
-                                  <>
-                                    <div className="h-4 w-16 bg-slate-100 animate-pulse rounded-full" />
-                                    <div className="h-4 w-20 bg-slate-100 animate-pulse rounded-full" />
-                                  </>
-                                )
-                              )}
-                            </div>
-                            {('interactionSites' in compound && compound?.interactionSites && compound.interactionSites.length > 0) && (
-                              <div className="pt-2 space-y-1.5">
-                                <div className="text-[10px] font-bold text-[#4f46e5] uppercase tracking-wider">Potential Interaction Sites</div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {compound.interactionSites.map((site, i) => (
-                                    <Badge key={`site-${idx}-${i}`} variant="secondary" className="bg-[#f5f7ff] text-[#4338ca] border-indigo-100 text-[9px] py-0 px-2">
-                                      {site}
-                                    </Badge>
-                                  ))}
+                          <div className="ap1-imp-body">
+                            <div className="ap1-imp-header">
+                              <div>
+                                <div className="ap1-imp-title">{imp.iupacName || "Product"}</div>
+                                <div className="mt-1.5 flex gap-2">
+                                  {imp.molecularDescriptors?.MolWt && (
+                                    <span className="ap1-pill mw">MW: {imp.molecularDescriptors.MolWt.toFixed(2)} g/mol</span>
+                                  )}
                                 </div>
                               </div>
+                              <div className="text-right">
+                                <div className="ap1-imp-prob-val">{prob.toFixed(1)}%</div>
+                                {imp.probabilityHeuristic != null && imp.probabilityBoltzmann != null && (
+                                  <div className="ap1-imp-prob-sub">
+                                    Heuristic: {(imp.probabilityHeuristic * 100).toFixed(1)}% | Boltzmann: {(imp.probabilityBoltzmann * 100).toFixed(1)}%
+                                  </div>
+                                )}
+                                {imp.relativeEnergy != null && (
+                                  <div className="text-xs font-mono text-[#64748B] text-right mt-1">
+                                    ΔG: {imp.relativeEnergy.toFixed(2)} kcal/mol
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="ap1-prob-bar-bg">
+                              <div className="ap1-prob-bar-fill" style={{ width: `${Math.min(Math.max(prob, 5), 100)}%` }}></div>
+                            </div>
+
+                            {imp.structureDescription && (
+                              <div className="ap1-imp-desc">{imp.structureDescription}</div>
                             )}
+
+                            {imp.mechanismExplanation && (
+                              <div className="ap1-mech-box">
+                                <div className="ap1-mech-title">
+                                  <span>⚡ Chemical Mechanism:</span>
+                                </div>
+                                <div>{imp.mechanismExplanation}</div>
+                              </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2 items-center">
+                              <span className={`ap1-badge-cond ${condClass}`}>{cond}</span>
+                              <span className="ap1-pill font-semibold text-[#4338CA] bg-[#EEF2FF] border-[#E0E7FF]">
+                                Origin: {imp.origin || "Parent Molecule"}
+                              </span>
+                              {imp.smiles && (
+                                <span className="ap1-pill font-mono text-[11px] text-[#64748B] truncate max-w-xs" title={imp.smiles}>
+                                  {imp.smiles}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-8">
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 min-h-[120px]">
-                      <h4 className="text-sm font-semibold flex items-center gap-2 text-[#0f172a] mb-2">
-                        AI Reasoning Framework
-                      </h4>
-                      <div className="text-xs text-slate-600 leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
-                        {result.chainOfThought ? result.chainOfThought : (
-                           <div className="animate-pulse space-y-2 mt-2">
-                             <div className="h-3 bg-slate-200 rounded w-full"></div>
-                             <div className="h-3 bg-slate-200 rounded w-5/6"></div>
-                             <div className="h-3 bg-slate-200 rounded w-4/6"></div>
-                           </div>
+                      );
+                    })
+                )}
+              </div>
+            )}
+
+            {/* Tab 2: Reactants & Components */}
+            {activeTab === "reactants" && (
+              <div className="space-y-4">
+                <div className="my-2">
+                  <h3 className="font-serif text-xl font-bold text-[#0F172A] mb-1">
+                    Input Molecular Profiles
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#64748B]">
+                    Calculated molecular descriptors, functional group features, and predicted reactive interaction sites.
+                  </p>
+                </div>
+
+                {(result.compounds || []).map((comp, idx) => {
+                  const mw = comp.molecularDescriptors?.MolWt;
+                  const role = idx === 0 ? "Primary Compound" : `Secondary Compound ${idx}`;
+                  const roleClass = idx === 0 ? "role-primary" : "role-secondary";
+
+                  return (
+                    <div key={`comp-card-${idx}`} className="ap1-comp-card flex-col sm:flex-row">
+                      <div className="ap1-comp-mol">
+                        <span className="ap1-comp-badge">C{idx + 1}</span>
+                        {comp.smiles ? (
+                          <ChemicalStructure smiles={comp.smiles} width={180} height={180} />
+                        ) : (
+                          <div className="w-36 h-36 bg-slate-100 rounded-lg animate-pulse" />
+                        )}
+                      </div>
+                      <div className="ap1-comp-info">
+                        <div className="flex items-center mb-1">
+                          <span className="ap1-comp-name">{comp.name || "Compound"}</span>
+                          <span className={`ap1-comp-role ${roleClass}`}>{role}</span>
+                        </div>
+                        {comp.smiles && (
+                          <div className="ap1-smiles-box" title={comp.smiles}>
+                            {comp.smiles}
+                          </div>
+                        )}
+                        <div className="ap1-tag-group">
+                          {mw && <span className="ap1-pill mw">MW: {mw.toFixed(2)} g/mol</span>}
+                          {(comp.features || []).map((f, fi) => (
+                            <span key={fi} className="ap1-pill">{f}</span>
+                          ))}
+                        </div>
+                        {comp.interactionSites && comp.interactionSites.length > 0 && (
+                          <div className="mt-3">
+                            <div className="text-[11px] font-bold text-[#4F46E5] uppercase tracking-wider mb-1">
+                              Reactive Interaction Centers:
+                            </div>
+                            <div className="ap1-tag-group">
+                              {comp.interactionSites.map((site, si) => (
+                                <span key={si} className="ap1-pill site">{site}</span>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
-
-                    <>
-                      <Separator />
-                      <section className="space-y-4">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-[#0f172a]">
-                          Predicted Reaction Products & Byproducts
-                        </h4>
-                        <div className="grid grid-cols-1 gap-6">
-                          {(!result.degradationImpurities || result.degradationImpurities.length === 0) ? (
-                            Array.from({ length: 3 }).map((_, i) => (
-                              <div key={`skeleton-impurity-${i}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col md:flex-row min-h-[256px]">
-                                <div className="w-full md:w-64 h-64 bg-slate-50 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 p-4">
-                                  <div className="animate-pulse bg-slate-200 h-32 w-32 rounded-full opacity-50" />
-                                </div>
-                                <div className="p-6 flex-1 space-y-4 w-full">
-                                  <div className="flex justify-between items-start">
-                                    <div className="space-y-2 w-full">
-                                      <div className="h-6 w-48 bg-slate-100 animate-pulse rounded" />
-                                      <div className="h-4 w-16 bg-slate-50 animate-pulse rounded" />
-                                    </div>
-                                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded" />
-                                  </div>
-                                  <div className="space-y-2 pt-2">
-                                    <div className="h-4 w-full bg-slate-50 animate-pulse rounded" />
-                                    <div className="h-4 w-5/6 bg-slate-50 animate-pulse rounded" />
-                                  </div>
-                                  <div className="bg-[#f8fafc] border border-slate-100 rounded-lg p-3 space-y-2 mt-4">
-                                    <div className="h-4 w-24 bg-slate-200 animate-pulse rounded mb-1" />
-                                    <div className="h-3 w-full bg-slate-100 animate-pulse rounded" />
-                                    <div className="h-3 w-4/5 bg-slate-100 animate-pulse rounded" />
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            [...(result.degradationImpurities || [])]
-                              .sort((a, b) => (b?.probability || 0) - (a?.probability || 0))
-                              .map((impurity, i) => (
-                              <div key={`impurity-${i}-${impurity?.iupacName || 'unk'}-${(impurity?.smiles || '').slice(0, 10)}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-200 transition-colors flex flex-col md:flex-row">
-                                <div className="w-full md:w-64 h-64 bg-white flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 p-4 relative">
-                                  {impurity?.smiles && (
-                                    <ChemicalStructure 
-                                      smiles={impurity.smiles} 
-                                      width={240} 
-                                      height={240} 
-                                    />
-                                  )}
-                                  <div className="absolute top-3 left-3 bg-[#f1f5f9] text-[#64748b] text-[10px] font-bold px-2 py-1 rounded-sm">
-                                    #{i + 1}
-                                  </div>
-                                </div>
-                                <div className="p-6 flex-1 space-y-4">
-                                  <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                      <div className="font-bold text-xl text-[#0f172a] break-words">
-                                        {impurity.iupacName}
-                                      </div>
-                                      {impurity.molecularDescriptors && (
-                                        <div className="text-[11px] font-mono font-medium text-slate-500 bg-slate-50 border border-slate-100 inline-flex px-2 py-0.5 rounded-sm">
-                                          MW: {impurity.molecularDescriptors.MolWt != null ? impurity.molecularDescriptors.MolWt.toFixed(2) : "N/A"}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="text-right space-y-1">
-                                      <div className="text-lg font-bold text-[#4f46e5]">{impurity.probability != null ? (impurity.probability * 100).toFixed(1) : "N/A"}%</div>
-                                      {impurity.probabilityHeuristic != null && impurity.probabilityBoltzmann != null && (
-                                        <div className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter">
-                                          H: {(impurity.probabilityHeuristic * 100).toFixed(1)}% | B: {(impurity.probabilityBoltzmann * 100).toFixed(1)}%
-                                        </div>
-                                      )}
-                                      {impurity.relativeEnergy != null && (
-                                        <div className="text-[10px] font-mono text-slate-400">
-                                          ΔG: {impurity.relativeEnergy.toFixed(2)} kcal/mol
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-[#475569] leading-relaxed">{impurity.structureDescription}</div>
-                                  <div className="bg-[#f8fafc] border border-slate-100 rounded-lg p-3 text-xs text-[#475569] leading-relaxed">
-                                    <span className="font-bold text-[#0f172a] block mb-1">Mechanism:</span>
-                                    {impurity.mechanismExplanation}
-                                  </div>
-
-                                  <div className="flex flex-wrap gap-3 pt-2">
-                                    {compounds.length > 1 && (
-                                      <div className="text-[10px] bg-[#eef2ff] text-[#4338ca] px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
-                                        {impurity.origin}
-                                      </div>
-                                    )}
-                                    <div className="text-[10px] bg-[#fffbeb] text-[#b45309] px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
-                                      {impurity.condition}
-                                    </div>
-                                    <div className="text-[10px] bg-[#ecfdf5] text-[#047857] px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
-                                      {impurity.source}
-                                    </div>
-                                    <div className="text-[10px] bg-[#f1f5f9] text-[#475569] px-3 py-1 rounded-full font-mono break-all" title={impurity.smiles}>
-                                      {impurity.smiles}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </section>
-                    </>
-                  </CardContent>
-                  <CardFooter className="bg-[#fcfcfc] border-t py-4">
-                    <p className="text-[10px] text-[#94a3b8] italic">
-                      Disclaimer: This prediction is generated by an AI model and should be used for chemical research purposes only. Always verify with experimental data and validated analytical methods.
-                    </p>
-                  </CardFooter>
-                </Card>
+                  );
+                })}
               </div>
-            </div>
             )}
+
+            {/* Tab 3: AI Reasoning Framework */}
+            {activeTab === "reasoning" && (
+              <div className="space-y-4">
+                <div className="my-2">
+                  <h3 className="font-serif text-xl font-bold text-[#0F172A] mb-1">
+                    AI Mechanistic Reasoning Framework
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#64748B]">
+                    Comprehensive kinetic pathways, microenvironmental influences, and thermodynamic justification.
+                  </p>
+                </div>
+
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-7 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
+                  <div className="text-sm text-[#334155] leading-relaxed whitespace-pre-wrap font-sans">
+                    {result.chainOfThought || "No detailed reasoning chain provided."}
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-5 text-xs text-[#475569] leading-relaxed">
+                  <strong className="text-[#0F172A] block mb-1 text-sm font-semibold">
+                    Analytical Guidance & Mechanistic Considerations:
+                  </strong>
+                  <ul className="list-disc pl-5 space-y-1 mt-1 text-[#475569]">
+                    <li>Thermodynamic equilibria (Boltzmann distribution) assume standard state conditions at 298.15K.</li>
+                    <li>Kinetic barrier overrides may favor lower activation energy pathways over thermodynamically deep energy wells.</li>
+                    <li>Secondary excipient microenvironmental changes (e.g. moisture sorption, basic surface catalysis) heavily modulate reaction rates.</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Disclaimer Matching Streamlit */}
+            <div className="border border-[#E2E8F0] rounded-xl bg-[#FAFAFA] p-4 text-xs text-[#64748B] leading-relaxed mt-6">
+              Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays (HPLC, LC-MS, NMR).
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t py-6 bg-white">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
-          <p>© 2026 INTERACTION Lab. All rights reserved.</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-foreground transition-colors">Documentation</a>
-            <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contact Support</a>
+      {/* Footer Matching Streamlit */}
+      <footer className="border-t border-[#E2E8F0] py-6 bg-white mt-auto">
+        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-[#64748B]">
+          <p>© 2026 INTERACTION Chemical Informatics. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-[11px]">
+            <span>Thermodynamic & Kinetic Modeling</span>
+            <span>•</span>
+            <span>Computational Chemoinformatics</span>
           </div>
         </div>
       </footer>

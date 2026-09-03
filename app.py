@@ -504,29 +504,6 @@ PRESET_COMPOUNDS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-REACTION_PRESETS = {
-    "Aspirin + Magnesium Stearate": {
-        "primary": {"value": "Aspirin", "type": "Name"},
-        "secondaries": [{"value": "Magnesium Stearate", "type": "Name"}],
-        "desc": "Base-catalyzed hydrolysis: alkaline Mg2+ microenvironment accelerates ester cleavage into Salicylic Acid.",
-    },
-    "Metformin + Lactose": {
-        "primary": {"value": "Metformin", "type": "Name"},
-        "secondaries": [{"value": "Lactose", "type": "Name"}],
-        "desc": "Maillard condensation reaction: nucleophilic biguanide primary/secondary amines react with reducing aldose open-chain form.",
-    },
-    "Ciprofloxacin + Magnesium Stearate": {
-        "primary": {"value": "Ciprofloxacin", "type": "Name"},
-        "secondaries": [{"value": "Magnesium Stearate", "type": "Name"}],
-        "desc": "Chelation interaction: beta-dicarbonyl center forms coordination complexes with divalent Mg2+.",
-    },
-    "Aspirin (Intrinsic Degradation)": {
-        "primary": {"value": "Aspirin", "type": "Name"},
-        "secondaries": [],
-        "desc": "Intrinsic chemical decomposition pathways: acid/base hydrolysis, thermal ester dimerization, and anhydride coupling.",
-    },
-}
-
 
 # ==============================================================================
 # 3. Chemical Vector SVG Generator & Descriptors
@@ -1184,18 +1161,6 @@ if st.session_state.view == "input":
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-        # Quick Preset Selector
-        st.markdown("<span style='font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em;'>Quick Reaction Presets:</span>", unsafe_allow_html=True)
-        preset_cols = st.columns(len(REACTION_PRESETS))
-        for idx, (p_title, p_info) in enumerate(REACTION_PRESETS.items()):
-            with preset_cols[idx]:
-                if st.button(f"📋 {p_title.split('(')[0].strip()}", key=f"btn_pre_{idx}", use_container_width=True):
-                    st.session_state.primary_compound = dict(p_info["primary"])
-                    st.session_state.secondary_compounds = [dict(s) for s in p_info["secondaries"]]
-                    st.rerun()
-
-        st.markdown("<div style='height: 1.25rem;'></div>", unsafe_allow_html=True)
 
         # Section: Primary Compound
         st.markdown("""
