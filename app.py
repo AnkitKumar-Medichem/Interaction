@@ -508,6 +508,12 @@ PRESET_COMPOUNDS: Dict[str, Dict[str, Any]] = {
 # ==============================================================================
 # 3. Chemical Vector SVG Generator & Descriptors
 # ==============================================================================
+def svg_to_data_uri(svg_str: str) -> str:
+    """Encodes SVG string to a data URI for 100% reliable rendering in Streamlit markdown."""
+    encoded = urllib.parse.quote(svg_str)
+    return f"data:image/svg+xml;utf8,{encoded}"
+
+
 @st.cache_data(show_spinner=False)
 def get_mol_svg(smiles: str, width: int = 240, height: int = 240) -> str:
     """Generates crisp transparent vector SVG molecules using RDKit or fallback."""
@@ -1409,7 +1415,8 @@ elif st.session_state.view == "results" and st.session_state.result:
             sorted_impurities = sorted(impurities, key=lambda x: x.get("probability", 0), reverse=True)
             for idx, imp in enumerate(sorted_impurities):
                 smi = imp.get("smiles", "")
-                svg = get_mol_svg(smi, width=250, height=250)
+                svg_raw = get_mol_svg(smi, width=250, height=250)
+                svg_uri = svg_to_data_uri(svg_raw)
                 mw = imp.get("molecularDescriptors", {}).get("MolWt")
                 mw_badge = f'<span class="ap1-pill mw">MW: {mw:.2f} g/mol</span>' if mw else ""
 
@@ -1438,10 +1445,10 @@ elif st.session_state.view == "results" and st.session_state.result:
                 card_html = f"""
                 <div class="ap1-imp-card">
                     <div class="ap1-imp-svg">
-                        <div style="position: absolute; top: 12px; left: 12px; background: #F1F5F9; color: #475569; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 4px;">
+                        <div style="position: absolute; top: 12px; left: 12px; background: #F1F5F9; color: #475569; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 4px; z-index: 2;">
                             #{idx + 1}
                         </div>
-                        {svg}
+                        <img src="{svg_uri}" style="width: 100%; height: 100%; object-fit: contain;" />
                     </div>
                     <div class="ap1-imp-body">
                         <div class="ap1-imp-header">
@@ -1498,7 +1505,8 @@ elif st.session_state.view == "results" and st.session_state.result:
 
         for idx, comp in enumerate(res.get("compounds", [])):
             smi = comp.get("smiles", "")
-            svg = get_mol_svg(smi, width=220, height=220)
+            svg_raw = get_mol_svg(smi, width=220, height=220)
+            svg_uri = svg_to_data_uri(svg_raw)
             mw = comp.get("molecularDescriptors", {}).get("MolWt")
             mw_str = f"MW: {mw:.2f} g/mol" if mw else "MW: N/A"
             role = "Primary Compound" if idx == 0 else f"Secondary Compound {idx}"
@@ -1511,7 +1519,7 @@ elif st.session_state.view == "results" and st.session_state.result:
             <div class="ap1-comp-card">
                 <div class="ap1-comp-mol">
                     <span class="ap1-comp-badge">C{idx + 1}</span>
-                    {svg}
+                    <img src="{svg_uri}" style="width: 100%; height: 100%; object-fit: contain;" />
                 </div>
                 <div class="ap1-comp-info">
                     <div style="display: flex; align-items: center; margin-bottom: 0.25rem;">
