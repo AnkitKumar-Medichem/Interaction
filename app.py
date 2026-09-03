@@ -1333,7 +1333,7 @@ elif st.session_state.view == "results" and st.session_state.result:
     # Action Toolbar
     col_t1, col_t2 = st.columns([1, 1])
     with col_t1:
-        if st.button("← Back to Reaction Setup", kind="secondary"):
+        if st.button("← Back to Reaction Setup", type="secondary"):
             st.session_state.view = "input"
             st.session_state.result = None
             st.rerun()
