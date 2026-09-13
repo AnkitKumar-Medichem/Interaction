@@ -439,24 +439,10 @@ export default function App() {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-white flex flex-col font-sans">
-      {/* Header Matching Streamlit */}
+      {/* Header */}
       <header className="border-b border-[#E2E8F0] bg-white sticky top-0 z-20">
-        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-          <div>
-            <h1 className="font-serif text-3xl font-extrabold text-[#0F172A] tracking-tight">INTERACTION</h1>
-            <p className="text-xs sm:text-sm font-semibold text-[#64748B]">Chemical Interaction & Byproduct Prediction Engine</p>
-          </div>
-          <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 bg-[#F8FAFC] rounded-full border border-[#E2E8F0]">
-            <div className="flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5 text-[#4F46E5]" />
-              <span className="text-xs font-semibold text-[#475569]">{dbStats.compounds} Compounds</span>
-            </div>
-            <Separator orientation="vertical" className="h-3.5 bg-[#E2E8F0]" />
-            <div className="flex items-center gap-1.5">
-              <History className="w-3.5 h-3.5 text-[#059669]" />
-              <span className="text-xs font-semibold text-[#475569]">{dbStats.predictions} Predictions</span>
-            </div>
-          </div>
+        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 h-16 flex items-center">
+          <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">Interaction</h1>
         </div>
       </header>
 

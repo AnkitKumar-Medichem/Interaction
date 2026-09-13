@@ -1296,29 +1296,13 @@ if "error_message" not in st.session_state:
 # ==============================================================================
 # 8. Top Branding & Status Header
 # ==============================================================================
-col_nav1, col_nav2 = st.columns([3, 2])
-with col_nav1:
-    st.markdown("""
-    <div style="display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.25rem;">
-        <span style="font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">
-            INTERACTION
-        </span>
-        <span style="font-size: 0.85rem; font-weight: 600; color: #64748B; letter-spacing: -0.01em;">
-            Chemical Interaction & Byproduct Prediction Engine
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-with col_nav2:
-    st.markdown("""
-    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; height: 100%;">
-        <span style="background: #F1F5F9; color: #475569; font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #E2E8F0;">
-            Kinetic & Thermodynamic Modeling
-        </span>
-        <span style="background: #EEF2FF; color: #4338CA; font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #E0E7FF;">
-            Boltzmann 298.15K
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div style="margin-bottom: 0.5rem;">
+    <span style="font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em;">
+        Interaction
+    </span>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
 
