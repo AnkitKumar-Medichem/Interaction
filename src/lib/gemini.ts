@@ -124,7 +124,7 @@ export async function predictInteraction(
           } else if (currentEvent === "complete") {
             finalResult = payload as PredictionResult;
           } else if (currentEvent === "error") {
-            throw new AnalysisError(payload.message || "An analytical failure occurred.", "SERVER_ERROR");
+            throw new AnalysisError(payload.message || "An analytical failure occurred.", payload.type || "SERVER_ERROR");
           }
         } catch (e) {
           if (e instanceof AnalysisError) throw e;

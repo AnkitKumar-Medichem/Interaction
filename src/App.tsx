@@ -510,7 +510,17 @@ export default function App() {
                         <AlertDescription className="text-red-700">
                           {error.message}
                         </AlertDescription>
-                        {(error.type === "QUOTA_EXCEEDED" || error.type === "MODEL_OVERLOADED" || error.type === "CONNECTION_ERROR" || error.type === "PERMISSION_DENIED" || error.type === "UNKNOWN_ERROR") && (
+                        {error.type === "CONFIG_ERROR" && (
+                          <div className="mt-3 p-3.5 bg-red-100/80 border border-red-200 rounded-lg text-xs text-red-900 space-y-1.5">
+                            <div className="font-bold">How to resolve this in Google AI Studio:</div>
+                            <ol className="list-decimal list-inside space-y-1 text-red-800">
+                              <li>Obtain a Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-red-950">aistudio.google.com/apikey</a>.</li>
+                              <li>In the AI Studio menu, open <strong>Settings</strong> &gt; <strong>Secrets</strong> (or Environment Variables).</li>
+                              <li>Update <strong>GEMINI_API_KEY</strong> with your genuine Gemini API key (note that Firebase Web API keys cannot be used for Generative AI).</li>
+                            </ol>
+                          </div>
+                        )}
+                        {(error.type === "QUOTA_EXCEEDED" || error.type === "MODEL_OVERLOADED" || error.type === "CONNECTION_ERROR" || error.type === "PERMISSION_DENIED" || error.type === "UNKNOWN_ERROR" || error.type === "CONFIG_ERROR") && (
                           <Button 
                             variant="outline" 
                             size="sm" 

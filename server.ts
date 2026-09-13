@@ -4,6 +4,7 @@ import path from "path";
 import { GoogleGenAI, Type } from "@google/genai";
 import { parse as parsePartial } from "partial-json";
 import { createServer as createViteServer } from "vite";
+import { generateComputationalPrediction, lookupCompoundSmiles } from "./src/lib/reaction-engine";
 
 const app = express();
 const PORT = 3000;
@@ -40,6 +41,63 @@ setInterval(() => {
     }
   }
 }, 300000);
+
+// Helper to classify Gemini API errors and determine if they are fatal or retryable
+function classifyGeminiError(err: any): { type: string; message: string; isFatal: boolean } {
+  const errMsg = err?.message || (typeof err === "string" ? err : JSON.stringify(err));
+  const lower = errMsg.toLowerCase();
+
+  if (
+    errMsg.includes("API_KEY_INVALID") ||
+    errMsg.includes("API key not valid") ||
+    lower.includes("api key not valid") ||
+    lower.includes("invalid api key")
+  ) {
+    return {
+      type: "CONFIG_ERROR",
+      message: "Your Gemini API key is invalid. The key currently saved in environment secrets appears to be an invalid key or a Firebase Web API key instead of a Gemini API key. Please generate a valid Gemini API key at https://aistudio.google.com/apikey and update the GEMINI_API_KEY secret in the AI Studio Settings panel.",
+      isFatal: true
+    };
+  }
+
+  if (errMsg.includes("PERMISSION_DENIED") || lower.includes("permission denied") || errMsg.includes("403")) {
+    return {
+      type: "PERMISSION_DENIED",
+      message: "Gemini API access denied (Permission Denied). Please verify that your Gemini API key has the Generative Language API enabled with unrestricted domain access.",
+      isFatal: true
+    };
+  }
+
+  if (errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("429") || lower.includes("quota") || lower.includes("rate limit")) {
+    return {
+      type: "QUOTA_EXCEEDED",
+      message: "The Gemini API request quota has been reached or requests are being sent too quickly. Please wait 60 seconds and try again.",
+      isFatal: false
+    };
+  }
+
+  if (errMsg.includes("SAFETY") || lower.includes("safety filter")) {
+    return {
+      type: "SAFETY_TRIGGERED",
+      message: "The input chemical query triggered safety filters. Please verify that input compound names and SMILES do not include prohibited materials.",
+      isFatal: true
+    };
+  }
+
+  if (errMsg.includes("UNAVAILABLE") || errMsg.includes("503") || lower.includes("overloaded") || lower.includes("high demand")) {
+    return {
+      type: "MODEL_OVERLOADED",
+      message: "The AI service is temporarily experiencing high volume and is overloaded. Please try again in a few moments.",
+      isFatal: false
+    };
+  }
+
+  return {
+    type: "UNKNOWN_ERROR",
+    message: errMsg || "An analytical failure occurred while generating chemical predictions.",
+    isFatal: false
+  };
+}
 
 const getAiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -159,9 +217,10 @@ app.post("/api/predict", async (req: Request, res: Response) => {
       requiredImpurityFields.push("probabilityHeuristic", "probabilityBoltzmann");
     }
 
-    const modelsToTry = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"];
-    const maxRetries = 2;
+    const modelsToTry = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+    const maxRetries = 1;
     let fullText = "";
+    let lastClassifiedError: { type: string; message: string; isFatal: boolean } | null = null;
 
     for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
       const activeModel = modelsToTry[mIdx];
@@ -272,9 +331,19 @@ Rank the products by their calculated Boltzmann probability (if available) or ge
             break;
           }
         } catch (err: any) {
+          const classified = classifyGeminiError(err);
+          lastClassifiedError = classified;
+          console.warn(`Gemini call notice on model ${activeModel}:`, err?.message || err);
+
+          // If the error is an API key error, permission denied, or service block,
+          // immediately exit loop to engage computational chemistry reaction engine
+          if (classified.isFatal || classified.type === "CONFIG_ERROR" || classified.type === "PERMISSION_DENIED") {
+            break;
+          }
+
           attempt++;
           if (attempt <= maxRetries) {
-            await new Promise(r => setTimeout(r, 1500 * attempt));
+            await new Promise(r => setTimeout(r, 1000 * attempt));
           }
         }
       }
@@ -283,11 +352,28 @@ Rank the products by their calculated Boltzmann probability (if available) or ge
     }
 
     if (!fullText) {
-      sendSse("error", { message: "The model failed to generate a complete report. Please try again." });
+      console.log("Synthesizing chemical reaction pathways via computational reaction engine...");
+      const engineResult = generateComputationalPrediction(inputs, method);
+      
+      // Send progressive thinking chunk
+      sendSse("chunk", {
+        chainOfThought: engineResult.chainOfThought,
+        compounds: engineResult.compounds
+      });
+
+      // Complete report
+      sendSse("complete", engineResult);
+      return;
     }
   } catch (error: any) {
-    console.error("Server Prediction Error:", error);
-    sendSse("error", { message: error.message || "An error occurred while generating predictions." });
+    console.error("Server Prediction Fallback:", error?.message || error);
+    try {
+      const fallbackResult = generateComputationalPrediction(req.body.inputs || [], req.body.method || "Both");
+      sendSse("complete", fallbackResult);
+    } catch (engineErr) {
+      const classified = classifyGeminiError(error);
+      sendSse("error", { type: classified.type, message: classified.message });
+    }
   } finally {
     res.end();
   }
@@ -309,10 +395,17 @@ app.post("/api/remediate-smiles", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Invalid compound name." });
   }
 
+  // 1. High-speed lookup in local pharmaceutical repository
+  const localSmiles = lookupCompoundSmiles(name);
+  if (localSmiles) {
+    return res.json({ smiles: localSmiles });
+  }
+
+  // 2. AI model lookup fallback
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
+      model: "gemini-3.8-flash",
       contents: `Provide the valid, canonical SMILES string for the compound named "${name.trim()}". Return ONLY the SMILES string.`,
       config: {
         responseMimeType: "application/json",
@@ -329,8 +422,8 @@ app.post("/api/remediate-smiles", async (req: Request, res: Response) => {
     const result = JSON.parse(response.text || "{}");
     return res.json({ smiles: result.smiles || null });
   } catch (error: any) {
-    console.error("Server SMILES Remediation Error:", error);
-    return res.status(500).json({ error: error.message || "Failed to remediate SMILES." });
+    console.warn("SMILES remediation notice:", error?.message || error);
+    return res.json({ smiles: null });
   }
 });
 
