@@ -689,7 +689,7 @@ elif nav_tab == "CSV Logbook (100 Queries)":
 
 elif nav_tab == "About & Documentation":
     st.subheader("About the Platform & Methodology")
-    st.markdown("""
+    st.markdown(r"""
     ### Scientific Framework
     This computational chemistry platform predicts chemical degradation, excipient incompatibility, and reaction impurities strictly based on:
     1. **Functional Group Identification**: Scans molecular SMILES to detect ester, carboxylic acid, phenol, amine, amide, beta-lactam, thioether, and aromatic systems.
@@ -703,7 +703,7 @@ elif nav_tab == "About & Documentation":
        - **Secondary Compound Interaction**: Transamidation, Maillard browning (reducing sugar + amine), chelation.
     3. **Thermodynamics & Kinetics**:
        - Standard free energy change ($\Delta G$ in kcal/mol at 298.15 K).
-       - Boltzmann probability distribution: $P_i = \\frac{e^{-\Delta G_i / RT}}{\sum_j e^{-\Delta G_j / RT}}$.
+       - Boltzmann probability distribution: $P_i = \frac{e^{-\Delta G_i / RT}}{\sum_j e^{-\Delta G_j / RT}}$.
        - Heuristic kinetic feasibility from functional group reactivity.
     4. **Visualization**:
        - Publication-quality heatmaps rendered using **Seaborn** (`sns.heatmap`).
