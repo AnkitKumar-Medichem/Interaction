@@ -143,7 +143,7 @@
     }
 }
 
-/* Custom Unbreakable HTML Chemical Cards Matching Streamlit */
+/* Custom Unbreakable HTML Chemical Cards - Static WarmCool */
 .ap1-comp-card {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
@@ -154,11 +154,6 @@
     margin-bottom: 0;
     width: 100%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    transition: all 0.15s ease;
-}
-.ap1-comp-card:hover {
-    border-color: #818CF8;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.06);
 }
 .ap1-comp-mol {
     width: 220px;
@@ -175,8 +170,8 @@
     position: absolute;
     top: 10px;
     left: 10px;
-    background: #EEF2FF;
-    color: #4F46E5;
+    background: #EFF6FF;
+    color: #2563EB;
     font-size: 0.65rem;
     font-weight: 700;
     padding: 0.2rem 0.55rem;
@@ -209,8 +204,8 @@
     margin-left: 0.5rem;
 }
 .role-primary {
-    background: #EEF2FF;
-    color: #4338CA;
+    background: #EFF6FF;
+    color: #1D4ED8;
 }
 .role-secondary {
     background: #F1F5F9;
@@ -250,13 +245,13 @@
     border-color: #E2E8F0;
 }
 .ap1-pill.site {
-    background: #F5F7FF;
-    border-color: #E0E7FF;
-    color: #4338CA;
+    background: #EFF6FF;
+    border-color: #DBEAFE;
+    color: #1D4ED8;
     font-weight: 600;
 }
 
-/* Impurity Card Presentation Matching Streamlit */
+/* Impurity Card Presentation - Static WarmCool */
 .ap1-imp-card {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
@@ -267,11 +262,6 @@
     margin-bottom: 0;
     width: 100%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.ap1-imp-card:hover {
-    border-color: #818CF8;
-    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.08);
 }
 .ap1-imp-svg {
     width: 250px;
@@ -304,7 +294,7 @@
 .ap1-imp-prob-val {
     font-size: 1.45rem;
     font-weight: 800;
-    color: #4F46E5;
+    color: #B91C1C;
     text-align: right;
     line-height: 1;
 }
@@ -320,14 +310,14 @@
 .ap1-prob-bar-bg {
     width: 100%;
     height: 6px;
-    background: #EEF2FF;
+    background: #F1F5F9;
     border-radius: 9999px;
     overflow: hidden;
     margin: 0.65rem 0 1rem 0;
 }
 .ap1-prob-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6366F1, #4F46E5);
+    background: linear-gradient(90deg, #3B82F6, #EA580C, #B91C1C);
     border-radius: 9999px;
 }
 .ap1-imp-desc {

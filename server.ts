@@ -5,6 +5,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { parse as parsePartial } from "partial-json";
 import { createServer as createViteServer } from "vite";
 import { generateComputationalPrediction, lookupCompoundSmiles } from "./src/lib/reaction-engine";
+import { generateInteractionHeatmap } from "./src/lib/heatmap-engine";
+import { renderSeabornHeatmap } from "./src/lib/python-seaborn";
 
 const app = express();
 const PORT = 3000;
@@ -99,10 +101,57 @@ function classifyGeminiError(err: any): { type: string; message: string; isFatal
   };
 }
 
+// Track API key operational status in memory
+let geminiKeyStatus: "untested" | "valid" | "invalid" = "untested";
+let lastCheckedApiKey = "";
+let probePromise: Promise<boolean> | null = null;
+
+async function probeGeminiApiKeySilently(key: string): Promise<boolean> {
+  if (!key || key === "MISSING_KEY" || key === "INVALID_OR_MISSING_KEY" || key.trim().length === 0) {
+    return false;
+  }
+  try {
+    const ai = new GoogleGenAI({ apiKey: key });
+    await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: "ping",
+      config: { maxOutputTokens: 1 }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isGeminiKeyConfiguredAndValid(): Promise<boolean> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "MISSING_KEY" || apiKey === "INVALID_OR_MISSING_KEY" || apiKey.trim().length === 0) {
+    geminiKeyStatus = "invalid";
+    return false;
+  }
+  if (apiKey !== lastCheckedApiKey || geminiKeyStatus === "untested") {
+    lastCheckedApiKey = apiKey;
+    if (!probePromise) {
+      probePromise = probeGeminiApiKeySilently(apiKey).then((ok) => {
+        geminiKeyStatus = ok ? "valid" : "invalid";
+        probePromise = null;
+        return ok;
+      });
+    }
+    return await probePromise;
+  }
+  return geminiKeyStatus === "valid";
+}
+
+// Background validation probe on boot
+if (process.env.GEMINI_API_KEY) {
+  isGeminiKeyConfiguredAndValid().catch(() => {});
+}
+
 const getAiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === "MISSING_KEY" || apiKey === "INVALID_OR_MISSING_KEY") {
-    throw new Error("GEMINI_API_KEY is not configured on the server. Please set it in Settings/Secrets.");
+  if (!apiKey || apiKey === "MISSING_KEY" || apiKey === "INVALID_OR_MISSING_KEY" || apiKey.trim().length === 0) {
+    throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -186,7 +235,7 @@ app.post("/api/predict", async (req: Request, res: Response) => {
       },
       condition: { 
         type: Type.STRING, 
-        enum: ["Oxidation", "Acidic Hydrolysis", "Basic Hydrolysis", "Photodegradation", "Thermal Degradation"] 
+        enum: ["Oxidation", "Acidic Hydrolysis", "Basic Hydrolysis", "Hydrolysis", "Photodegradation", "Thermal Degradation"] 
       },
       source: { 
         type: Type.STRING, 
@@ -217,142 +266,143 @@ app.post("/api/predict", async (req: Request, res: Response) => {
       requiredImpurityFields.push("probabilityHeuristic", "probabilityBoltzmann");
     }
 
-    const modelsToTry = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
-    const maxRetries = 1;
     let fullText = "";
     let lastClassifiedError: { type: string; message: string; isFatal: boolean } | null = null;
 
-    for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
-      const activeModel = modelsToTry[mIdx];
-      let attempt = 0;
-      let success = false;
+    const useAi = await isGeminiKeyConfiguredAndValid();
 
-      while (attempt <= maxRetries && !success) {
-        try {
-          const ai = getAiClient();
-          const responseStream = await ai.models.generateContentStream({
-            model: activeModel,
-            contents: `Predict and evaluate the chemical interaction and reaction products of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
-            config: {
-              temperature: 0.1,
-              systemInstruction: `You are an expert computational chemist and reaction mechanism evaluator. 
-Your task is to predict the chemical interaction and transformation products of Compound 1 using the following analytical framework${method === "Both" ? "s" : ""}:
-${method === "Heuristic" || method === "Both" ? "\n1. HEURISTIC ANALYSIS: Based on expert chemical reasoning, reactive site identification, and known reaction kinetics." : ""}
-${method === "Boltzmann" || method === "Both" ? `\n${method === "Both" ? "2." : "1."} BOLTZMANN ANALYSIS: Based on thermodynamic stability and calculated relative formation energy (ΔG) at 298.15K.` : ""}
+    if (useAi) {
+      const modelsToTry = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+      const maxRetries = 1;
 
-${method === "Both" ? "When \"Both\" is selected, you must perform these two analyses independently for each predicted product to provide a comparative perspective." : ""}
+      modelLoop: for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
+        const activeModel = modelsToTry[mIdx];
+        let attempt = 0;
+        let success = false;
 
-Evaluate the chemical reactivity and transformation of Compound 1 due to:
-1. Direct degradation / intrinsic reactivity of Compound 1.
-2. Chemical interactions between Compound 1 and any other provided co-reactants (Compounds 2-5).
+        while (attempt <= maxRetries && !success) {
+          try {
+            const ai = getAiClient();
+            const responseStream = await ai.models.generateContentStream({
+              model: activeModel,
+              contents: `Predict and evaluate the chemical interaction and reaction products of Compound 1 in the following mixture using the ${method === "Both" ? "Heuristic AND Boltzmann" : method}-based approach:\n${compoundsInfo}`,
+              config: {
+                temperature: 0.1,
+                systemInstruction: `You are an expert computational chemist, cheminformatician, and reaction mechanism evaluator.
+CRITICAL CALCULATION RULE: All calculations and predictions MUST be carried out based on:
+1. Systematic identification of every functional group in the input molecule (Compound 1) and any secondary compounds (Compounds 2-5).
+2. The specific chemical reactivity of those identified functional groups against:
+   - Acidic stress (e.g. A_Ac2 solvolysis, hydronium protonation, acid-catalyzed dehydration)
+   - Basic stress (e.g. B_Ac2 saponification, hydroxide nucleophilic attack, deprotonation)
+   - Hydrolysis (neutral water solvolysis across labile linkages under humidity)
+   - Photolytic stress (UV chromophore excitation, photo-Fries rearrangement, Norrish cleavage, photo-oxidation)
+   - Thermal stress (pyrolysis, decarboxylation, syn-elimination, thermal condensation)
+   - Oxidative stress (single-electron transfer, phenoxy/anilinyl radicals, S-oxidation to sulfoxide/sulfone, N-oxidation)
+   - AND/OR cross-reactions with functional groups of secondary compound(s) (e.g. transamidation, Maillard Schiff base with reducing sugars, transesterification, chelation/salt formation).
 
-You MUST evaluate reactivity under these specific conditions:
-- Oxidation
-- Acidic Hydrolysis
-- Basic Hydrolysis
-- Photodegradation
-- Thermal Degradation
+Analytical Framework${method === "Both" ? "s" : ""}:
+${method === "Heuristic" || method === "Both" ? "1. HEURISTIC ANALYSIS: Based on expert chemical reasoning, functional group reactive sites, and known reaction kinetics." : ""}
+${method === "Boltzmann" || method === "Both" ? `${method === "Both" ? "2." : "1."} BOLTZMANN ANALYSIS: Based on thermodynamic stability and calculated relative formation free energy (ΔG in kcal/mol at 298.15K) via Boltzmann distribution.` : ""}
 
-First, identify the chemical structures correctly for ALL provided compounds.
+${method === "Both" ? "When 'Both' is selected, perform both analyses independently for each predicted product to provide a comparative perspective." : ""}
+
+First, identify the chemical structures and functional groups correctly for ALL provided compounds.
 For each compound, provide:
-- Identified name (If the user explicitly provided a name, you MUST echo their exact original name back to them. DO NOT rename it to IUPAC or another common name).
-- SMILES string (MUST be a valid, standard, canonical SMILES string compatible with RDKit and PubChem).
-- List of key structural features.
-- List of specific "Interaction Sites" likely to be involved in reaction or degradation.
+- Identified name (Echo the exact user-specified name or standard chemical name).
+- SMILES string (MUST be valid, canonical SMILES obeying valency rules).
+- List of key functional group features.
+- List of specific reactive interaction sites.
 
 Predict ONLY the TOP 5 most significant reaction byproducts, degradation products, or interaction adducts derived from Compound 1.
 For each product, you MUST specify:
-- Whether it forms from "Direct degradation" or "Interaction with other compound".
-- Which specific condition it forms under.
+- Whether it forms from 'Direct degradation' or 'Interaction with other compound'.
+- Which specific condition it forms under ('Acidic Hydrolysis', 'Basic Hydrolysis', 'Hydrolysis', 'Photodegradation', 'Thermal Degradation', 'Oxidation').
 - IUPAC name of the NEW PRODUCT.
 - SMILES string of the new product (valid canonical SMILES obeying valences).
-- A brief explanation of the underlying mechanism (mechanismExplanation).
+- A detailed explanation of the underlying mechanism explicitly citing the reacting functional group(s) (mechanismExplanation).
 - ${probabilityInstruction}
 
 IMPORTANT: Probabilities MUST be realistic estimates between 0.01 and 0.99.
-Rank the products by their calculated Boltzmann probability (if available) or general probability. Do not return more than 5 products.`,
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  chainOfThought: {
-                    type: Type.STRING,
-                    description: `Perform your step-by-step chemical reasoning, reaction pathway derivation${method !== "Heuristic" ? ", and energy estimation" : ""} here BEFORE outputting the final compounds.`
-                  },
-                  compounds: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        name: { type: Type.STRING },
-                        smiles: { type: Type.STRING },
-                        features: { type: Type.ARRAY, items: { type: Type.STRING } },
-                        interactionSites: { type: Type.ARRAY, items: { type: Type.STRING } }
-                      },
-                      required: ["name", "smiles", "features", "interactionSites"]
+Rank the products by their calculated probability descending. Do not return more than 5 products.`,
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                    chainOfThought: {
+                      type: Type.STRING,
+                      description: `Step-by-step chemical reasoning: detail the functional group identification of Compound 1, evaluate condition-by-condition reactivity (acidic, basic, hydrolysis, photolytic, thermal, oxidative), calculate cross-reactivity with secondary compounds, and estimate formation energies/probabilities.`
+                    },
+                    compounds: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          name: { type: Type.STRING },
+                          smiles: { type: Type.STRING },
+                          features: { type: Type.ARRAY, items: { type: Type.STRING } },
+                          interactionSites: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        },
+                        required: ["name", "smiles", "features", "interactionSites"]
+                      }
+                    },
+                    interactionType: { type: Type.STRING, enum: ["Physical", "Chemical", "None"] },
+                    mechanism: { type: Type.STRING },
+                    degradationImpurities: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: impurityProperties,
+                        required: requiredImpurityFields
+                      }
                     }
                   },
-                  interactionType: { type: Type.STRING, enum: ["Physical", "Chemical", "None"] },
-                  mechanism: { type: Type.STRING },
-                  degradationImpurities: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: impurityProperties,
-                      required: requiredImpurityFields
-                    }
+                  required: ["chainOfThought", "compounds", "interactionType", "mechanism", "degradationImpurities"]
+                }
+              }
+            });
+
+            fullText = "";
+            for await (const chunk of responseStream) {
+              if (chunk.text) {
+                fullText += chunk.text;
+                try {
+                  const partial = parsePartial(fullText);
+                  if (partial) {
+                    sendSse("chunk", partial);
                   }
-                },
-                required: ["chainOfThought", "compounds", "interactionType", "mechanism", "degradationImpurities"]
+                } catch (_) {}
               }
             }
-          });
 
-          fullText = "";
-          for await (const chunk of responseStream) {
-            if (chunk.text) {
-              fullText += chunk.text;
-              try {
-                const partial = parsePartial(fullText);
-                if (partial) {
-                  sendSse("chunk", partial);
-                }
-              } catch (_) {}
+            if (fullText) {
+              const parsed = JSON.parse(fullText);
+              if (parsed && Array.isArray(parsed.degradationImpurities)) {
+                parsed.degradationImpurities = parsed.degradationImpurities.slice(0, 5);
+              }
+              sendSse("complete", parsed);
+              success = true;
+              geminiKeyStatus = "valid";
+              break modelLoop;
             }
-          }
+          } catch (err: any) {
+            const classified = classifyGeminiError(err);
+            lastClassifiedError = classified;
 
-          if (fullText) {
-            const parsed = JSON.parse(fullText);
-            if (parsed && Array.isArray(parsed.degradationImpurities)) {
-              parsed.degradationImpurities = parsed.degradationImpurities.slice(0, 5);
+            if (classified.isFatal || classified.type === "CONFIG_ERROR" || classified.type === "PERMISSION_DENIED") {
+              geminiKeyStatus = "invalid";
+              break modelLoop;
             }
-            sendSse("complete", parsed);
-            success = true;
-            break;
-          }
-        } catch (err: any) {
-          const classified = classifyGeminiError(err);
-          lastClassifiedError = classified;
-          console.warn(`Gemini call notice on model ${activeModel}:`, err?.message || err);
 
-          // If the error is an API key error, permission denied, or service block,
-          // immediately exit loop to engage computational chemistry reaction engine
-          if (classified.isFatal || classified.type === "CONFIG_ERROR" || classified.type === "PERMISSION_DENIED") {
-            break;
-          }
-
-          attempt++;
-          if (attempt <= maxRetries) {
-            await new Promise(r => setTimeout(r, 1000 * attempt));
+            attempt++;
+            if (attempt <= maxRetries) {
+              await new Promise(r => setTimeout(r, 1000 * attempt));
+            }
           }
         }
       }
-
-      if (success) break;
     }
 
     if (!fullText) {
-      console.log("Synthesizing chemical reaction pathways via computational reaction engine...");
       const engineResult = generateComputationalPrediction(inputs, method);
       
       // Send progressive thinking chunk
@@ -366,7 +416,6 @@ Rank the products by their calculated Boltzmann probability (if available) or ge
       return;
     }
   } catch (error: any) {
-    console.error("Server Prediction Fallback:", error?.message || error);
     try {
       const fallbackResult = generateComputationalPrediction(req.body.inputs || [], req.body.method || "Both");
       sendSse("complete", fallbackResult);
@@ -401,7 +450,13 @@ app.post("/api/remediate-smiles", async (req: Request, res: Response) => {
     return res.json({ smiles: localSmiles });
   }
 
-  // 2. AI model lookup fallback
+  // 2. Check if external AI key is configured and valid
+  const hasValidKey = await isGeminiKeyConfiguredAndValid();
+  if (!hasValidKey) {
+    return res.json({ smiles: null });
+  }
+
+  // 3. AI model lookup fallback
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
@@ -422,13 +477,57 @@ app.post("/api/remediate-smiles", async (req: Request, res: Response) => {
     const result = JSON.parse(response.text || "{}");
     return res.json({ smiles: result.smiles || null });
   } catch (error: any) {
-    console.warn("SMILES remediation notice:", error?.message || error);
+    const classified = classifyGeminiError(error);
+    if (classified.isFatal || classified.type === "CONFIG_ERROR" || classified.type === "PERMISSION_DENIED") {
+      geminiKeyStatus = "invalid";
+    }
     return res.json({ smiles: null });
   }
 });
 
 // ==========================================
-// 3. Vite Middleware & Asset Serving
+// 3. Reactive Centers Interaction Heatmap
+// ==========================================
+app.post("/api/interaction-heatmap", async (req: Request, res: Response) => {
+  try {
+    const { compounds, cmap = "warmcool", title, conditions } = req.body;
+    if (!Array.isArray(compounds) || compounds.length === 0) {
+      return res.status(400).json({ error: "At least one compound is required for interaction heatmap." });
+    }
+
+    const result = generateInteractionHeatmap({ compounds, cmap, title, conditions });
+
+    // Render publication-grade Seaborn heatmap using Python backend
+    try {
+      const chartTitle =
+        title ||
+        (result.compound2Name !== "Intramolecular"
+          ? `Stress Degradation & Incompatibility Heatmap: ${result.compound1Name} & ${result.compound2Name}`
+          : `Stress Degradation Heatmap: ${result.compound1Name}`);
+
+      const seabornPng = await renderSeabornHeatmap({
+        matrix: result.matrix,
+        rowLabels: result.rowLabels,
+        colLabels: result.colLabels,
+        title: chartTitle,
+        cmap,
+      });
+
+      if (seabornPng) {
+        result.heatmapBase64 = seabornPng;
+      }
+    } catch (seabornErr) {
+      console.warn("Seaborn heatmap generation fallback to SVG:", seabornErr);
+    }
+
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Internal server error" });
+  }
+});
+
+// ==========================================
+// 4. Vite Middleware & Asset Serving
 // ==========================================
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

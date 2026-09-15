@@ -14,7 +14,8 @@ import {
   Info,
   Database,
   History,
-  ArrowLeft
+  ArrowLeft,
+  FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -24,16 +25,19 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { predictInteraction, PredictionResult, InputType, CompoundInput, AnalysisError, PredictionMethod } from "@/src/lib/gemini";
+import { predictInteraction, PredictionResult, InputType, CompoundInput, AnalysisError, PredictionMethod, FunctionalGroupReactivity } from "@/src/lib/gemini";
+import { detectFunctionalGroupsDetailed } from "@/src/lib/reaction-engine";
 import { ChemicalStructure } from "@/src/components/ChemicalStructure";
+import { InteractionHeatmap } from "@/src/components/InteractionHeatmap";
+import { CsvLogbook } from "@/src/components/CsvLogbook";
 import { initRDKit, getMolecularDescriptors, computeStrainEnergy } from "@/src/lib/rdkit";
 import { sanitizeData } from "@/src/lib/firestore-utils";
 import { Plus, Trash2, AlertCircle, WifiOff, Clock, Lock } from "lucide-react";
 import * as XLSX from "xlsx";
 import { db, auth } from "@/src/lib/firebase";
-import { collection, addDoc, setDoc, doc, serverTimestamp, getDocs, query, orderBy, limit, where, getCountFromServer } from "firebase/firestore";
+import { collection, doc, serverTimestamp, getDocs, query, orderBy, limit, getCountFromServer } from "firebase/firestore";
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { seedDatabase } from "@/src/lib/seed";
+import { logQueryToDatabase } from "@/src/lib/logbook";
 
 import { 
   Tooltip,
@@ -45,75 +49,29 @@ import {
 export default function App() {
   const reportRef = useRef<HTMLDivElement>(null);
   const [compounds, setCompounds] = useState<CompoundInput[]>([
-    { value: "", type: "Name" }
+    { value: "", type: "SMILES" }
   ]);
-  const [view, setView] = useState<'input' | 'loading' | 'results'>('input');
+  const [view, setView] = useState<'input' | 'loading' | 'results' | 'logbook'>('input');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState<number | null>(null);
-  const [dbStats, setDbStats] = useState({ compounds: 0, predictions: 0 });
+  const [logbookCount, setLogbookCount] = useState<number>(0);
 
-  // Debounced Search Effect
-  useEffect(() => {
-    if (showSuggestions === null) return;
-    
-    const activeCompound = compounds[showSuggestions];
-    if (!activeCompound || activeCompound.type !== "Name" || activeCompound.value.length < 2) {
-      setSuggestions([]);
-      return;
+  const fetchLogbookStats = async () => {
+    try {
+      const snap = await getCountFromServer(collection(db, "query_logs"));
+      setLogbookCount(snap.data().count);
+    } catch (e) {
+      console.warn("Logbook count temporarily unavailable:", e);
     }
-
-    const timer = setTimeout(async () => {
-      try {
-        const val = activeCompound.value.toLowerCase();
-        const q = query(
-          collection(db, "compounds"), 
-          where("name", ">=", activeCompound.value.charAt(0).toUpperCase() + activeCompound.value.slice(1).toLowerCase()),
-          where("name", "<=", activeCompound.value.charAt(0).toUpperCase() + activeCompound.value.slice(1).toLowerCase() + "\uf8ff"),
-          limit(20)
-        );
-        const snap = await getDocs(q);
-        const allSuggestions = snap.docs.map(d => ({ ...d.data(), id: d.id })) as any[];
-        
-        // Dynamically trigger remediation for compounds with missing SMILES
-        allSuggestions.forEach((s: any) => {
-          if (!s.smiles) {
-            import('./lib/compound-manager').then(m => m.remediateCompoundSmiles(s.id, s.name)).catch(console.error);
-          }
-        });
-        
-        // Client-side case-insensitive filtering
-        const filtered = allSuggestions.filter(s => 
-          s.name.toLowerCase().includes(val)
-        );
-        
-        setSuggestions(filtered.slice(0, 5));
-      } catch (err) {
-        console.error("Search Error:", err);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [showSuggestions, compounds]);
+  };
 
   useEffect(() => {
-    // Initialize Firebase Seed and stats
     const init = async () => {
       try {
-        await seedDatabase();
-        initRDKit().catch(console.error); 
-        
-        // Fetch Stats using efficient count aggregation
-        const compoundsCount = await getCountFromServer(collection(db, "compounds"));
-        const predictionsCount = await getCountFromServer(collection(db, "predictions"));
-        
-        setDbStats({
-          compounds: compoundsCount.data().count,
-          predictions: predictionsCount.data().count
-        });
+        initRDKit().catch(console.error);
+        await fetchLogbookStats();
       } catch (e) {
         console.error("Initialization Error:", e);
       }
@@ -127,18 +85,11 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleSuggestionSelect = (index: number, compound: any) => {
-    const newCompounds = [...compounds];
-    newCompounds[index] = { value: compound.name, type: "Name" };
-    setCompounds(newCompounds);
-    setShowSuggestions(null);
-  };
-
   const [predictionMethod, setPredictionMethod] = useState<PredictionMethod>("Both");
 
   const addCompound = () => {
     if (compounds.length < 5) {
-      setCompounds([...compounds, { value: "", type: "Name" }]);
+      setCompounds([...compounds, { value: "", type: "SMILES" }]);
     }
   };
 
@@ -152,7 +103,7 @@ export default function App() {
 
   const updateCompound = (index: number, field: keyof CompoundInput, value: string) => {
     const newCompounds = [...compounds];
-    newCompounds[index] = { ...newCompounds[index], [field]: value };
+    newCompounds[index] = { ...newCompounds[index], [field]: value, type: "SMILES" };
     setCompounds(newCompounds);
   };
 
@@ -161,52 +112,24 @@ export default function App() {
     const validInputs = compounds.filter(c => c.value.trim() !== "");
     if (validInputs.length === 0) return;
 
+    // Enforce SMILES-only inputs
+    const formattedInputs: CompoundInput[] = validInputs.map(c => ({
+      value: c.value.trim(),
+      type: "SMILES"
+    }));
+
     setView('loading');
     setLoading(true);
     setError(null);
     try {
-      
-      // Attempt to upgrade any "Name" inputs to exact "SMILES" representations using our local database 
-      // prior to passing them to the AI to prevent AI structure hallucinations.
-      const upgradedInputs = await Promise.all(validInputs.map(async (input) => {
-        if (input.type === "Name") {
-          try {
-            const q = query(collection(db, "compounds"), where("name", "==", input.value.trim()));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-              const docData = snap.docs[0].data();
-              if (docData.smiles) {
-                console.log(`Upgrading ${input.value} to exact structural SMILES from DB`);
-                return { value: docData.smiles, type: "SMILES" as InputType, originalName: input.value.trim() };
-              }
-            }
-            // Case insensitive fallback check
-            const q2 = query(collection(db, "compounds"), where("name", "==", input.value.trim().toLowerCase()));
-            const snap2 = await getDocs(q2);
-            if (!snap2.empty) {
-               const docData2 = snap2.docs[0].data();
-               if (docData2.smiles) {
-                 return { value: docData2.smiles, type: "SMILES" as InputType, originalName: input.value.trim() };
-               }
-            }
-          } catch (e) {
-            console.error("DB Upgrade query failed", e);
-          }
+      // Compute RDKit descriptors for input compounds before passing to AI
+      const validInputsWithDescriptors = await Promise.all(formattedInputs.map(async (input) => {
+        try {
+          const desc = await getMolecularDescriptors(input.value);
+          return { ...input, descriptors: desc };
+        } catch (e) {
+          return input;
         }
-        return input;
-      }));
-
-      // Compute RDKit descriptors for input compounds (if SMILES provided) before passing to AI
-      const validInputsWithDescriptors = await Promise.all(upgradedInputs.map(async (input) => {
-        if (input.type === "SMILES") {
-          try {
-            const desc = await getMolecularDescriptors(input.value);
-            return { ...input, descriptors: desc };
-          } catch (e) {
-            return input;
-          }
-        }
-        return input;
       }));
 
       let switchedView = false;
@@ -252,7 +175,6 @@ export default function App() {
             if (predictionMethod === "Boltzmann" || predictionMethod === "Both") {
               const strainEnergy = await computeStrainEnergy(impurity.smiles);
               if (strainEnergy !== null) {
-                // Ground the LLM's estimate with explicit MMFF94 computational reality.
                 impurity.relativeEnergy = strainEnergy; 
               }
             }
@@ -263,52 +185,17 @@ export default function App() {
       setResult(prediction);
       setView('results');
 
-      // Save prediction to Firebase
-      await addDoc(collection(db, "predictions"), sanitizeData({
-        inputs: validInputs,
-        result: prediction,
-        method: predictionMethod,
-        timestamp: serverTimestamp()
-      }));
+      // Maintain the CSV logbook of the 100 most recent queries on the database
+      const primarySmiles = formattedInputs[0].value;
+      const secondarySmilesList = formattedInputs.slice(1).map(c => c.value);
+      await logQueryToDatabase(
+        primarySmiles,
+        secondarySmilesList,
+        prediction.degradationImpurities || []
+      );
 
-      // Add new compounds to database if they don't exist
-      for (const comp of prediction.compounds) {
-        const hasName = comp.name && comp.name.toLowerCase() !== "unknown" && comp.name.trim() !== "";
-        const hasSmiles = comp.smiles && comp.smiles.trim() !== "";
-
-        if (!hasName && !hasSmiles) continue;
-
-        let exists = false;
-        if (hasName) {
-          const q = query(collection(db, "compounds"), where("name", "==", comp.name));
-          const snap = await getDocs(q);
-          if (!snap.empty) exists = true;
-        }
-
-        if (!exists && hasSmiles) {
-          const q2 = query(collection(db, "compounds"), where("smiles", "==", comp.smiles));
-          const snap2 = await getDocs(q2);
-          if (!snap2.empty) exists = true;
-        }
-        
-        if (!exists) {
-          const docId = (hasName ? comp.name : comp.smiles).replace(/[^a-z0-9]/gi, '_').toLowerCase();
-          await setDoc(doc(db, "compounds", docId), {
-            name: hasName ? comp.name : "",
-            smiles: hasSmiles ? comp.smiles : "",
-            createdAt: new Date().toISOString()
-          });
-          console.log(`Added new compound to database: ${comp.name || comp.smiles}`);
-        }
-      }
-
-      // Refresh stats efficiently
-      const compoundsCount = await getCountFromServer(collection(db, "compounds"));
-      const predictionsCount = await getCountFromServer(collection(db, "predictions"));
-      setDbStats({
-        compounds: compoundsCount.data().count,
-        predictions: predictionsCount.data().count
-      });
+      // Refresh logbook count
+      await fetchLogbookStats();
 
     } catch (err: any) {
       setView('input');
@@ -441,12 +328,68 @@ export default function App() {
       <div className="min-h-screen bg-white flex flex-col font-sans">
       {/* Header */}
       <header className="border-b border-[#E2E8F0] bg-white sticky top-0 z-20">
-        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 h-16 flex items-center">
-          <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">Interaction</h1>
+        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">Interaction</h1>
+            {view === 'results' && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                Report
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (view === 'logbook') {
+                  setView(result ? 'results' : 'input');
+                }
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                view !== 'logbook'
+                  ? 'bg-[#EEF2FF] text-[#4F46E5]'
+                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
+              }`}
+            >
+              Reaction Modeling
+            </button>
+            <button
+              onClick={() => setView('logbook')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                view === 'logbook'
+                  ? 'bg-[#EEF2FF] text-[#4F46E5]'
+                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              CSV Logbook
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 font-mono">
+                {logbookCount}
+              </span>
+            </button>
+            {view === 'results' && (
+              <button
+                onClick={() => { setView('input'); setResult(null); }}
+                className="ml-2 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                &larr; New Setup
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="flex-1 max-w-[1120px] mx-auto px-4 sm:px-6 py-6 w-full relative">
+        {/* CSV Logbook View */}
+        {view === 'logbook' && (
+          <CsvLogbook 
+            onNewReactionClick={() => {
+              setView('input');
+              setResult(null);
+            }} 
+          />
+        )}
+
         {/* Loading View Matching Streamlit */}
         {view === 'loading' && (
           <div className="py-20 px-4 text-center max-w-xl mx-auto">
@@ -466,7 +409,9 @@ export default function App() {
             <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
               <div className="mb-6">
                 <h2 className="font-serif text-2xl font-bold text-[#0F172A] mb-1">Reaction Mixture Setup</h2>
-                <p className="text-sm text-[#64748B]">Define the primary chemical compound and optional secondary co-reactants or additives.</p>
+                <p className="text-sm text-[#64748B]">
+                  Enter Simplified Molecular Input Line Entry System (SMILES) strings for the primary compound and optional secondary co-reactants.
+                </p>
               </div>
 
               {error && (
@@ -524,55 +469,31 @@ export default function App() {
               )}
 
               <form onSubmit={handlePredict} autoComplete="off">
-                {/* Section: Primary Compound */}
+                {/* Section: Primary Compound (SMILES Only) */}
                 <div className="mb-6">
-                  <div className="flex items-center gap-2 text-sm font-bold text-[#312E81] mb-2">
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#4F46E5]"></span>
-                    Primary Compound
-                  </div>
-                  <div className="flex gap-3">
-                    <select
-                      value={compounds[0].type}
-                      onChange={(e) => updateCompound(0, "type", e.target.value as InputType)}
-                      className="w-28 h-10 px-3 text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#334155] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
-                    >
-                      <option value="Name">Name</option>
-                      <option value="SMILES">SMILES</option>
-                    </select>
-                    <div className="relative flex-1">
-                      <input 
-                        placeholder={compounds[0].type === "Name" ? "e.g. Aspirin or CC(=O)Oc1ccccc1C(=O)O" : "e.g. CC(=O)Oc1ccccc1C(=O)O"}
-                        value={compounds[0].value}
-                        autoComplete="off"
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateCompound(0, "value", val);
-                          setError(null);
-                          if (compounds[0].type === "Name" && val.length > 1) {
-                            setShowSuggestions(0);
-                          } else {
-                            setShowSuggestions(null);
-                          }
-                        }}
-                        required
-                        className="w-full h-10 px-3.5 text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
-                      />
-                      {showSuggestions === 0 && suggestions.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
-                          {suggestions.map((s, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              className="w-full text-left px-4 py-2 text-xs hover:bg-[#EEF2FF] border-b border-[#F1F5F9] last:border-0"
-                              onClick={() => handleSuggestionSelect(0, s)}
-                            >
-                              <div className="font-bold text-[#0F172A]">{s.name}</div>
-                              <div className="text-[10px] text-[#64748B] truncate">{s.smiles}</div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-sm font-bold text-[#312E81]">
+                      <span className="inline-block w-2 h-2 rounded-full bg-[#4F46E5]"></span>
+                      Primary Compound (SMILES)
                     </div>
+                    <span className="text-[11px] font-medium text-[#64748B]">SMILES required</span>
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O (Aspirin)"
+                      value={compounds[0].value}
+                      autoComplete="off"
+                      spellCheck={false}
+                      onChange={(e) => {
+                        updateCompound(0, "value", e.target.value);
+                        setError(null);
+                      }}
+                      required
+                      className="w-full h-11 px-3.5 font-mono text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] placeholder:font-sans focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                    />
+                    <p className="mt-1.5 text-xs text-[#64748B]">
+                      SMILES only. E.g. Aspirin: <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[#0F172A]">CC(=O)Oc1ccccc1C(=O)O</code>
+                    </p>
                   </div>
                 </div>
 
@@ -581,7 +502,7 @@ export default function App() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-sm font-bold text-[#334155]">
                       <span className="inline-block w-2 h-2 rounded-full bg-[#94A3B8]"></span>
-                      Secondary Compounds (Co-reactants / Additives)
+                      Secondary Compounds (SMILES) (Co-reactants / Additives)
                     </div>
                     <span className="font-mono text-xs text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded">
                       {compounds.slice(1).filter(c => c.value.trim()).length} Added
@@ -593,46 +514,18 @@ export default function App() {
                       const actualIndex = idx + 1;
                       return (
                         <div key={`sec-${actualIndex}`} className="flex items-center gap-3">
-                          <select
-                            value={c.type}
-                            onChange={(e) => updateCompound(actualIndex, "type", e.target.value as InputType)}
-                            className="w-28 h-10 px-3 text-xs font-semibold bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#334155] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
-                          >
-                            <option value="Name">Name</option>
-                            <option value="SMILES">SMILES</option>
-                          </select>
-                          <div className="relative flex-1">
+                          <div className="flex-1">
                             <input
-                              placeholder="e.g. Magnesium Stearate or Lactose"
+                              placeholder={`e.g. Secondary Compound ${actualIndex} SMILES (e.g. CC(=O)NC1=CC=C(O)C=C1)`}
                               value={c.value}
                               autoComplete="off"
+                              spellCheck={false}
                               onChange={(e) => {
-                                const val = e.target.value;
-                                updateCompound(actualIndex, "value", val);
+                                updateCompound(actualIndex, "value", e.target.value);
                                 setError(null);
-                                if (c.type === "Name" && val.length > 1) {
-                                  setShowSuggestions(actualIndex);
-                                } else {
-                                  setShowSuggestions(null);
-                                }
                               }}
-                              className="w-full h-10 px-3.5 text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                              className="w-full h-10 px-3.5 font-mono text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] placeholder:font-sans focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
                             />
-                            {showSuggestions === actualIndex && suggestions.length > 0 && (
-                              <div className="absolute z-50 w-full mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
-                                {suggestions.map((s, i) => (
-                                  <button
-                                    key={i}
-                                    type="button"
-                                    className="w-full text-left px-4 py-2 text-xs hover:bg-[#EEF2FF] border-b border-[#F1F5F9] last:border-0"
-                                    onClick={() => handleSuggestionSelect(actualIndex, s)}
-                                  >
-                                    <div className="font-bold text-[#0F172A]">{s.name}</div>
-                                    <div className="text-[10px] text-[#64748B] truncate">{s.smiles}</div>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
                           </div>
                           <button
                             type="button"
@@ -652,7 +545,7 @@ export default function App() {
                       onClick={addCompound}
                       className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#CBD5E1] bg-white text-[#334155] hover:bg-[#F8FAFC] text-xs font-semibold rounded-lg shadow-xs transition-colors"
                     >
-                      + Add Secondary Compound
+                      + Add Secondary Compound (SMILES)
                     </button>
                   )}
                 </div>
@@ -710,22 +603,6 @@ export default function App() {
 
           return (
             <div className="w-full space-y-6">
-              {/* Action Toolbar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <button
-                  onClick={() => { setView('input'); setResult(null); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-medium text-xs rounded-lg transition-colors shadow-xs"
-                >
-                  ← Back to Reaction Setup
-                </button>
-                <button
-                  onClick={downloadExcel}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#CBD5E1] hover:border-[#94A3B8] text-[#334155] hover:text-[#0F172A] hover:bg-[#F8FAFC] font-medium text-xs rounded-lg transition-colors shadow-xs"
-                >
-                  Download Excel Report
-                </button>
-              </div>
-
             {/* 1. Input Chemical Data Card */}
             <section className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs">
               <div className="mb-5">
@@ -771,7 +648,7 @@ export default function App() {
                         </div>
                         {comp.interactionSites && comp.interactionSites.length > 0 && (
                           <div className="mt-3">
-                            <div className="text-[11px] font-bold text-[#4F46E5] uppercase tracking-wider mb-1">
+                            <div className="text-[11px] font-bold text-[#2563EB] uppercase tracking-wider mb-1">
                               Reactive Interaction Centers:
                             </div>
                             <div className="ap1-tag-group">
@@ -787,6 +664,145 @@ export default function App() {
                 })}
               </div>
             </section>
+
+            {/* Functional Group Reactivity Analysis Card */}
+            {(() => {
+              const primaryComp = (result.compounds || [])[0];
+              const fgList: FunctionalGroupReactivity[] = result.functionalGroupAnalysis || 
+                (primaryComp?.smiles ? detectFunctionalGroupsDetailed(primaryComp.smiles).functionalGroups : []);
+              
+              if (fgList.length === 0) return null;
+
+              const getVulnStyle = (vuln: string) => {
+                switch (vuln) {
+                  case "Critical": return "bg-rose-50 text-rose-700 border-rose-200";
+                  case "High": return "bg-amber-50 text-amber-700 border-amber-200";
+                  case "Moderate": return "bg-yellow-50 text-yellow-800 border-yellow-200";
+                  case "Low": return "bg-blue-50 text-blue-700 border-blue-200";
+                  default: return "bg-slate-50 text-slate-600 border-slate-200";
+                }
+              };
+
+              return (
+                <section className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs">
+                  <div className="mb-5">
+                    <h3 className="font-serif text-xl font-bold text-[#0F172A] mb-1">
+                      Functional Group Reactivity Analysis
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#64748B]">
+                      Systematic evaluation of identified functional groups and their mechanistic reactivity with acidic, basic, hydrolysis, photolytic, thermal, oxidative conditions, and co-reactant functional groups.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-5">
+                    {fgList.map((fg, fgIdx) => (
+                      <div key={`fg-${fgIdx}`} className="border border-[#E2E8F0] rounded-xl p-4 bg-[#FAFAFA] flex flex-col gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#E2E8F0]">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-[#0F172A]">{fg.groupName}</span>
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                              {fg.category}
+                            </span>
+                            <span className="font-mono text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                              {fg.smilesFragment}
+                            </span>
+                          </div>
+                          <div className="text-xs text-[#64748B]">
+                            <span className="font-medium text-[#475569]">Reactive Center:</span> {fg.reactiveSite}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {/* Acidic */}
+                          <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-[#0F172A]">Acidic Stress</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.acidic.vulnerability)}`}>
+                                {fg.acidic.vulnerability}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#475569] leading-relaxed">{fg.acidic.mechanism}</p>
+                          </div>
+
+                          {/* Basic */}
+                          <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-[#0F172A]">Basic Stress</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.basic.vulnerability)}`}>
+                                {fg.basic.vulnerability}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#475569] leading-relaxed">{fg.basic.mechanism}</p>
+                          </div>
+
+                          {/* Hydrolysis */}
+                          <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-[#0F172A]">Hydrolysis (Aqueous)</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.hydrolysis.vulnerability)}`}>
+                                {fg.hydrolysis.vulnerability}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#475569] leading-relaxed">{fg.hydrolysis.mechanism}</p>
+                          </div>
+
+                          {/* Photolytic */}
+                          <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-[#0F172A]">Photolytic Stress</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.photolytic.vulnerability)}`}>
+                                {fg.photolytic.vulnerability}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#475569] leading-relaxed">{fg.photolytic.mechanism}</p>
+                          </div>
+
+                          {/* Thermal */}
+                          <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-[#0F172A]">Thermal Stress</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.thermal.vulnerability)}`}>
+                                {fg.thermal.vulnerability}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#475569] leading-relaxed">{fg.thermal.mechanism}</p>
+                          </div>
+
+                          {/* Oxidative */}
+                          <div className="bg-white border border-[#E2E8F0] rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-bold text-[#0F172A]">Oxidative Stress</span>
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.oxidative.vulnerability)}`}>
+                                {fg.oxidative.vulnerability}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#475569] leading-relaxed">{fg.oxidative.mechanism}</p>
+                          </div>
+
+                          {/* Secondary Interaction (if present) */}
+                          {fg.secondaryInteraction && (
+                            <div className="bg-white border border-indigo-200 rounded-lg p-3 md:col-span-2 lg:col-span-3">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-xs font-bold text-indigo-900">
+                                  Secondary Compound Cross-Reactivity {fg.secondaryInteraction.partnerGroup ? `(Target: ${fg.secondaryInteraction.partnerGroup})` : ""}
+                                </span>
+                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getVulnStyle(fg.secondaryInteraction.vulnerability)}`}>
+                                  {fg.secondaryInteraction.vulnerability}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#475569] leading-relaxed">{fg.secondaryInteraction.mechanism}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })()}
+
+            {/* 2. Interaction Potential & Reactive Centers Heatmap (Seaborn) */}
+            <InteractionHeatmap compounds={result.compounds || []} />
 
             {/* 3. Mechanistic Framework Evaluation Card */}
             <section className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs">
@@ -896,7 +912,7 @@ export default function App() {
 
                           <div className="flex flex-wrap gap-2 items-center">
                             <span className={`ap1-badge-cond ${condClass}`}>{cond}</span>
-                            <span className="ap1-pill font-semibold text-[#4338CA] bg-[#EEF2FF] border-[#E0E7FF]">
+                            <span className="ap1-pill font-semibold text-[#1D4ED8] bg-[#EFF6FF] border-[#DBEAFE]">
                               Origin: {imp.origin || "Parent Molecule"}
                             </span>
                             {imp.smiles && (

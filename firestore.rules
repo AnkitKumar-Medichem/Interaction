@@ -1,82 +1,36 @@
-// ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// Collection: compounds
-// Document ID: auto-generated or name-based
-// Fields:
-//   - name: string (required) - Common name
-//   - smiles: string (required) - SMILES string
-//   - category: string (optional) - Therapeutic category
-//   - createdAt: timestamp (optional)
-//
-// Collection: predictions
-// Document ID: auto-generated
-// Fields:
-//   - inputs: array (required) - List of input compounds
-//   - result: map (required) - The prediction result object
-//   - method: string (required) - Boltzmann, Heuristic, or Both
-//   - timestamp: timestamp (required)
-//   - userId: string (optional) - UID of the user who ran the prediction
-//
-// ===============================================================
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    
-    function isAuthenticated() {
-      return request.auth != null;
+    function isValidQueryLog(data) {
+      return data.primaryCompound is string && data.primaryCompound.size() > 0 && data.primaryCompound.size() <= 2000 &&
+             data.timestamp is string;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isValidLogbook(data) {
+      return data.csvContent is string;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && 
-             (request.auth.token.email == "ak5789248@gmail.com" && request.auth.token.email_verified == true);
-    }
-
-    function isValidCompound(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
-             data.smiles is string && data.smiles.size() <= 2000;
-    }
-
-    function isValidPrediction(data) {
-      return data.inputs is list && data.inputs.size() > 0 && data.inputs.size() <= 10 &&
-             data.result is map &&
-             data.method is string && (data.method == 'Boltzmann' || data.method == 'Heuristic' || data.method == 'Both');
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
-    match /compounds/{compoundId} {
-      // Allow public read for compound lookup and autocomplete
+    match /query_logs/{logId} {
       allow read: if true;
-      // Allow creation of verified compounds with length and type bounds
-      allow create: if isValidCompound(request.resource.data);
-      // Allow updating missing SMILES/descriptors, but preserve name integrity
-      allow update: if (isValidCompound(request.resource.data) && request.resource.data.name == resource.data.name) || isAdmin();
-      // Forbid deletion to prevent database wiping
-      allow delete: if isAdmin();
+      allow create: if isValidQueryLog(request.resource.data);
+      allow update: if isValidQueryLog(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /logbook/{docId} {
+      allow read: if true;
+      allow create, update: if isValidLogbook(request.resource.data);
+      allow delete: if true;
+    }
+
+    // Allow purging of legacy collections
+    match /compounds/{compoundId} {
+      allow read, write, delete: if true;
     }
 
     match /predictions/{predictionId} {
-      // Allow read for summary metrics and history
-      allow read: if true;
-      // Allow creation of valid prediction results
-      allow create: if isValidPrediction(request.resource.data);
-      // Predictions are immutable once logged
-      allow update: if isAdmin();
-      // Forbid deletion by public users
-      allow delete: if isAdmin();
+      allow read, write, delete: if true;
     }
   }
 }

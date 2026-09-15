@@ -8,11 +8,26 @@ export interface CompoundInfo {
   molecularDescriptors?: MolecularDescriptors;
 }
 
+export interface FunctionalGroupReactivity {
+  groupName: string;
+  category: string;
+  smilesFragment: string;
+  reactiveSite: string;
+  acidic: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
+  basic: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
+  hydrolysis: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
+  photolytic: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
+  thermal: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
+  oxidative: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
+  secondaryInteraction?: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "None"; partnerGroup?: string; mechanism: string };
+}
+
 export interface PredictionResult {
   chainOfThought: string;
   compounds: CompoundInfo[];
   interactionType: "Physical" | "Chemical" | "None";
   mechanism: string;
+  functionalGroupAnalysis?: FunctionalGroupReactivity[];
   degradationImpurities: {
     iupacName: string;
     smiles: string;
@@ -22,7 +37,7 @@ export interface PredictionResult {
     probabilityHeuristic?: number;
     probabilityBoltzmann?: number;
     relativeEnergy?: number;
-    condition: "Oxidation" | "Acidic Hydrolysis" | "Basic Hydrolysis" | "Photodegradation" | "Thermal Degradation";
+    condition: "Oxidation" | "Acidic Hydrolysis" | "Basic Hydrolysis" | "Hydrolysis" | "Photodegradation" | "Thermal Degradation" | string;
     source: "Stress degradation" | "Interaction with other compound";
     mechanismExplanation: string;
     molecularDescriptors?: MolecularDescriptors;
@@ -101,6 +116,35 @@ export async function predictInteraction(
   const decoder = new TextDecoder();
   let buffer = "";
   let finalResult: PredictionResult | null = null;
+  let currentEvent = "message";
+  let lastPartial: Partial<PredictionResult> | null = null;
+
+  const processLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    if (trimmed.startsWith("event: ")) {
+      currentEvent = trimmed.slice(7).trim();
+    } else if (trimmed.startsWith("data: ")) {
+      const dataStr = trimmed.slice(6).trim();
+      if (!dataStr) return;
+      try {
+        const payload = JSON.parse(dataStr);
+        if (currentEvent === "chunk") {
+          lastPartial = payload as Partial<PredictionResult>;
+          if (onChunk) {
+            onChunk(payload as Partial<PredictionResult>);
+          }
+        } else if (currentEvent === "complete") {
+          finalResult = payload as PredictionResult;
+        } else if (currentEvent === "error") {
+          throw new AnalysisError(payload.message || "An analytical failure occurred.", payload.type || "SERVER_ERROR");
+        }
+      } catch (e) {
+        if (e instanceof AnalysisError) throw e;
+      }
+    }
+  };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -108,29 +152,32 @@ export async function predictInteraction(
 
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
+    // Leave whatever incomplete trailing fragment is left in buffer
+    buffer = lines.pop() ?? "";
 
-    let currentEvent = "message";
     for (const line of lines) {
-      if (line.startsWith("event: ")) {
-        currentEvent = line.slice(7).trim();
-      } else if (line.startsWith("data: ")) {
-        const dataStr = line.slice(6).trim();
-        if (!dataStr) continue;
-        try {
-          const payload = JSON.parse(dataStr);
-          if (currentEvent === "chunk" && onChunk) {
-            onChunk(payload as Partial<PredictionResult>);
-          } else if (currentEvent === "complete") {
-            finalResult = payload as PredictionResult;
-          } else if (currentEvent === "error") {
-            throw new AnalysisError(payload.message || "An analytical failure occurred.", payload.type || "SERVER_ERROR");
-          }
-        } catch (e) {
-          if (e instanceof AnalysisError) throw e;
-        }
-      }
+      processLine(line);
     }
+  }
+
+  // Flush any final fragment remaining in buffer after stream ends
+  buffer += decoder.decode();
+  if (buffer.trim()) {
+    const remainingLines = buffer.split("\n");
+    for (const line of remainingLines) {
+      processLine(line);
+    }
+  }
+
+  // Robust fallback: if complete event was missed but we received a complete structural partial
+  if (!finalResult && lastPartial && lastPartial.compounds && lastPartial.mechanism) {
+    finalResult = {
+      chainOfThought: lastPartial.chainOfThought || "",
+      compounds: lastPartial.compounds || [],
+      interactionType: lastPartial.interactionType || "None",
+      mechanism: lastPartial.mechanism || "",
+      degradationImpurities: lastPartial.degradationImpurities || []
+    };
   }
 
   if (!finalResult) {
