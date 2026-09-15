@@ -480,7 +480,7 @@ export default function App() {
                   </div>
                   <div>
                     <input 
-                      placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O (Aspirin)"
+                      placeholder="Enter canonical SMILES string"
                       value={compounds[0].value}
                       autoComplete="off"
                       spellCheck={false}
@@ -492,7 +492,7 @@ export default function App() {
                       className="w-full h-11 px-3.5 font-mono text-sm bg-white border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] placeholder:font-sans focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
                     />
                     <p className="mt-1.5 text-xs text-[#64748B]">
-                      SMILES only. E.g. Aspirin: <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[#0F172A]">CC(=O)Oc1ccccc1C(=O)O</code>
+                      Provide canonical SMILES string for the active chemical ingredient.
                     </p>
                   </div>
                 </div>
@@ -516,7 +516,7 @@ export default function App() {
                         <div key={`sec-${actualIndex}`} className="flex items-center gap-3">
                           <div className="flex-1">
                             <input
-                              placeholder={`e.g. Secondary Compound ${actualIndex} SMILES (e.g. CC(=O)NC1=CC=C(O)C=C1)`}
+                              placeholder={`Secondary Compound ${actualIndex} SMILES`}
                               value={c.value}
                               autoComplete="off"
                               spellCheck={false}

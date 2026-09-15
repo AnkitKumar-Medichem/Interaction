@@ -351,6 +351,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
+# Clean HTML Render Utility (Prevents Markdown Code Block Indentation Glitches)
+# ==============================================================================
+def render_html(html_str: str):
+    """
+    Renders an HTML snippet cleanly in Streamlit without risk of Markdown
+    parsers treating indented lines or blank lines as code blocks (<pre><code>).
+    """
+    clean_lines = [line.strip() for line in html_str.splitlines() if line.strip()]
+    st.markdown(" ".join(clean_lines), unsafe_allow_html=True)
+
+# ==============================================================================
 # Chemical Structure Rendering & Descriptors Engine
 # ==============================================================================
 def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200) -> str:
@@ -881,12 +892,12 @@ def predict_degradation_and_reactions(
 # ==============================================================================
 # Main Application UI Header
 # ==============================================================================
-st.markdown("""
+render_html("""
 <div class="app-header">
     <div class="app-title">Interaction</div>
     <div class="app-subtitle">Computational Chemical Reaction & Impurity Prediction Platform</div>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 # Top Navigation Tabs matching AI Studio
 tab_predict, tab_logbook, tab_about = st.tabs([
@@ -909,8 +920,8 @@ with tab_predict:
         with col_input1:
             primary_smiles = st.text_input(
                 "Primary Compound (SMILES) *",
-                value="CC(=O)Oc1ccccc1C(=O)O",
-                placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O (Aspirin)",
+                value="",
+                placeholder="Enter canonical SMILES string",
                 help="Enter the canonical SMILES string for the active chemical ingredient."
             )
 
@@ -923,7 +934,7 @@ with tab_predict:
                 sec_val = st.text_input(
                     f"Secondary Compound {i+1} (SMILES)",
                     key=f"sec_smiles_{i}",
-                    placeholder="e.g. NC1=CC=CC=C1 or CC(=O)NC1=CC=C(O)C=C1",
+                    placeholder="Enter secondary compound SMILES",
                     help=f"Co-reactant, excipient, or secondary ingredient {i+1} SMILES."
                 )
                 sec_smiles_list.append(sec_val)
@@ -1014,7 +1025,7 @@ with tab_predict:
             </div>
             """
 
-        st.markdown(f"""
+        render_html(f"""
         <div class="ap1-comp-card">
             <div class="ap1-comp-mol">
                 <span class="ap1-comp-badge">C1</span>
@@ -1036,7 +1047,7 @@ with tab_predict:
                 {sites_html}
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Secondary Compound Cards (If provided)
         for s_idx, sec_sm in enumerate(cur_secondary):
@@ -1046,7 +1057,7 @@ with tab_predict:
             sec_mol_html = f'<img src="{sec_img}" alt="Secondary Compound {s_idx+1}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if sec_img else '<div style="color: #94A3B8; font-size: 0.75rem;">Structure diagram unavailable</div>'
             sec_mw_pill = f'<span class="ap1-pill mw">MW: {sec_mw:.2f} g/mol</span>' if sec_mw else ''
 
-            st.markdown(f"""
+            render_html(f"""
             <div class="ap1-comp-card">
                 <div class="ap1-comp-mol">
                     <span class="ap1-comp-badge">C{s_idx+2}</span>
@@ -1065,7 +1076,7 @@ with tab_predict:
                     </div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
 
@@ -1081,7 +1092,7 @@ with tab_predict:
 
                 c1, c2, c3 = st.columns(3)
                 with c1:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="cond-card">
                         <div class="cond-card-title">
                             <span>Acidic Stress</span>
@@ -1089,9 +1100,9 @@ with tab_predict:
                         </div>
                         <div class="cond-card-desc">{fg['acidic'][1]}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
                 with c2:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="cond-card">
                         <div class="cond-card-title">
                             <span>Basic Stress</span>
@@ -1099,9 +1110,9 @@ with tab_predict:
                         </div>
                         <div class="cond-card-desc">{fg['basic'][1]}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
                 with c3:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="cond-card">
                         <div class="cond-card-title">
                             <span>Hydrolysis (Aqueous)</span>
@@ -1109,13 +1120,13 @@ with tab_predict:
                         </div>
                         <div class="cond-card-desc">{fg['hydrolysis'][1]}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
 
                 st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
 
                 c4, c5, c6 = st.columns(3)
                 with c4:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="cond-card">
                         <div class="cond-card-title">
                             <span>Photolytic Stress</span>
@@ -1123,9 +1134,9 @@ with tab_predict:
                         </div>
                         <div class="cond-card-desc">{fg['photolytic'][1]}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
                 with c5:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="cond-card">
                         <div class="cond-card-title">
                             <span>Thermal Stress</span>
@@ -1133,9 +1144,9 @@ with tab_predict:
                         </div>
                         <div class="cond-card-desc">{fg['thermal'][1]}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
                 with c6:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div class="cond-card">
                         <div class="cond-card-title">
                             <span>Oxidative Stress</span>
@@ -1143,14 +1154,14 @@ with tab_predict:
                         </div>
                         <div class="cond-card-desc">{fg['oxidative'][1]}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
 
                 if "cross_reaction" in fg:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div style="margin-top: 0.75rem; background: #FAF5FF; border: 1px solid #F3E8FF; border-radius: 8px; padding: 0.75rem; font-size: 0.75rem; color: #7E22CE;">
                         <strong>Cross-Reactivity with Additives / Excipients:</strong> <span class="vuln-{fg['cross_reaction'][0].lower()}">{fg['cross_reaction'][0]}</span> — {fg['cross_reaction'][1]}
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
 
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
 
@@ -1200,7 +1211,7 @@ with tab_predict:
             imp_mol_html = f'<img src="{imp_img}" alt="Structure of {imp.get("iupacName", "Impurity")}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if imp_img else '<div style="color: #94A3B8; font-size: 0.75rem; text-align: center;">Structure diagram unavailable</div>'
             mw_badge_html = f'<span class="ap1-pill mw">MW: {imp_mw:.2f} g/mol</span>' if imp_mw else ''
 
-            st.markdown(f"""
+            render_html(f"""
             <div class="ap1-imp-card">
                 <div class="ap1-imp-svg">
                     <span class="ap1-imp-idx-badge">#{idx + 1}</span>
@@ -1245,7 +1256,7 @@ with tab_predict:
                     </div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
 # ==============================================================================
 # TAB 2: Query Logbook (100 Queries)
@@ -1280,7 +1291,7 @@ with tab_about:
     
     1. **Functional Group Identification**:
        - Scans molecular SMILES to detect ester, carboxylic acid, phenol, amine, amide, beta-lactam, thioether, and aromatic systems.
-       - Maps reactive sites (e.g. four-membered lactam carbonyl, ester acyloxy oxygen, nucleophilic amine lone pair).
+       - Maps reactive sites across strained ring carbonyls, ester acyloxy oxygens, and nucleophilic amine lone pairs.
     
     2. **Condition-Specific Stress Degradation**:
        - **Acidic Hydrolysis**: $A_{Ac}2$ ester solvolysis, lactam ring opening, amide cleavage.

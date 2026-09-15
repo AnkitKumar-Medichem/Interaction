@@ -228,10 +228,10 @@ app.post("/api/predict", async (req: Request, res: Response) => {
         description: "SMILES string of the newly formed product. CRITICAL WARNING: You must mathematically ensure standard valence rules are obeyed. Do not attach 5 bonds to Carbon. RDKit will fail to parse this if valences are exceeded."
       },
       structureDescription: { type: Type.STRING },
-      origin: { type: Type.STRING, description: "Which specific compound(s) this product originated from. E.g. 'Compound 1 and Compound 2'" },
+      origin: { type: Type.STRING, description: "Which specific compound(s) this product originated from, such as 'Compound 1' or 'Compound 1 and Compound 2'." },
       probability: { 
         type: Type.NUMBER, 
-        description: "Primary probability of formation as a decimal between 0.0 and 1.0 (e.g., 0.85 for 85%). Used for ranking." 
+        description: "Primary probability of formation as a decimal between 0.0 and 1.0. Used for ranking." 
       },
       condition: { 
         type: Type.STRING, 
@@ -243,7 +243,7 @@ app.post("/api/predict", async (req: Request, res: Response) => {
       },
       mechanismExplanation: {
         type: Type.STRING,
-        description: "Brief explanation of the interaction mechanism (e.g., pH change, oxidation, complexation, adsorption, precipitation). Mention effects on stability or release kinetics."
+        description: "Brief explanation of the interaction mechanism including pH change, oxidation, complexation, adsorption, or precipitation. Mention effects on stability or release kinetics."
       }
     };
 
@@ -292,13 +292,13 @@ app.post("/api/predict", async (req: Request, res: Response) => {
 CRITICAL CALCULATION RULE: All calculations and predictions MUST be carried out based on:
 1. Systematic identification of every functional group in the input molecule (Compound 1) and any secondary compounds (Compounds 2-5).
 2. The specific chemical reactivity of those identified functional groups against:
-   - Acidic stress (e.g. A_Ac2 solvolysis, hydronium protonation, acid-catalyzed dehydration)
-   - Basic stress (e.g. B_Ac2 saponification, hydroxide nucleophilic attack, deprotonation)
+   - Acidic stress (including A_Ac2 solvolysis, hydronium protonation, acid-catalyzed dehydration)
+   - Basic stress (including B_Ac2 saponification, hydroxide nucleophilic attack, deprotonation)
    - Hydrolysis (neutral water solvolysis across labile linkages under humidity)
    - Photolytic stress (UV chromophore excitation, photo-Fries rearrangement, Norrish cleavage, photo-oxidation)
    - Thermal stress (pyrolysis, decarboxylation, syn-elimination, thermal condensation)
    - Oxidative stress (single-electron transfer, phenoxy/anilinyl radicals, S-oxidation to sulfoxide/sulfone, N-oxidation)
-   - AND/OR cross-reactions with functional groups of secondary compound(s) (e.g. transamidation, Maillard Schiff base with reducing sugars, transesterification, chelation/salt formation).
+   - AND/OR cross-reactions with functional groups of secondary compound(s) (including transamidation, Maillard Schiff base with reducing sugars, transesterification, chelation/salt formation).
 
 Analytical Framework${method === "Both" ? "s" : ""}:
 ${method === "Heuristic" || method === "Both" ? "1. HEURISTIC ANALYSIS: Based on expert chemical reasoning, functional group reactive sites, and known reaction kinetics." : ""}
