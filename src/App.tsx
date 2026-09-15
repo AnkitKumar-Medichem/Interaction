@@ -801,7 +801,7 @@ export default function App() {
               );
             })()}
 
-            {/* 2. Interaction Potential & Reactive Centers Heatmap (Seaborn) */}
+            {/* 2. Stress Degradation & Incompatibility Heatmap */}
             <InteractionHeatmap compounds={result.compounds || []} />
 
             {/* 3. Mechanistic Framework Evaluation Card */}
