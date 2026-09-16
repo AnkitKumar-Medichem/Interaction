@@ -32,7 +32,7 @@ def main():
             print(json.dumps({"success": False, "error": "Empty matrix data provided"}))
             sys.exit(1)
 
-        # Truncate long row labels for clean display
+        # Clean row labels for display
         display_row_labels = [lbl if len(lbl) <= 38 else lbl[:35] + "..." for lbl in row_labels]
 
         df = pd.DataFrame(matrix, index=display_row_labels, columns=col_labels)
@@ -40,23 +40,20 @@ def main():
         # Dimensions
         n_rows = len(display_row_labels)
         n_cols = len(col_labels)
-        fig_width = max(9.0, n_cols * 1.5)
-        fig_height = max(5.2, n_rows * 0.85 + 1.8)
+        fig_width = max(8.5, n_cols * 1.6 + 2.0)
+        fig_height = max(4.6, n_rows * 0.7 + 1.8)
 
         fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=150)
         fig.patch.set_facecolor('#FFFFFF')
         ax.set_facecolor('#F8FAFC')
 
-        # Annotation labels formatted as percentages
-        annot_matrix = np.vectorize(lambda x: f"{int(round(float(x) * 100))}%")(matrix)
-
         # Diverging colormap
         cmap = 'vlag' if cmap_name in ['vlag', 'warmcool'] else 'coolwarm'
 
+        # Percentage removed from heatmap display
         sns.heatmap(
             df,
-            annot=annot_matrix,
-            fmt="",
+            annot=False,
             cmap=cmap,
             vmin=0.0,
             vmax=1.0,
@@ -64,12 +61,11 @@ def main():
             linewidths=2.0,
             linecolor='#FFFFFF',
             square=False,
-            ax=ax,
-            annot_kws={'fontsize': 10, 'fontweight': 'bold'}
+            ax=ax
         )
 
         ax.set_title(title, fontsize=13, fontweight='bold', pad=18, color='#0F172A')
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=20, ha='right', fontsize=9.5, fontweight='600', color='#334155')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=15 if n_cols > 3 else 0, ha='center', fontsize=9.5, fontweight='600', color='#334155')
         ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=9.5, fontweight='600', color='#334155')
 
         plt.tight_layout()

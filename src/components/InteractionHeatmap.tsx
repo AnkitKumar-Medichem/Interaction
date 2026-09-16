@@ -185,10 +185,10 @@ export const InteractionHeatmap: React.FC<InteractionHeatmapProps> = ({ compound
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-bold text-xs">
-                          {item.rowLabel} &bull; <span className="underline decoration-[#94A3B8]">{item.colLabel} Condition</span>
+                          {item.colLabel} &bull; <span className="underline decoration-[#94A3B8]">{item.rowLabel} Stress</span>
                         </div>
                         <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full ${badgeBg}`}>
-                          {item.percentage}
+                          {item.severity}
                         </span>
                       </div>
                       <div className="text-xs font-semibold text-[#1D4ED8] mb-1">

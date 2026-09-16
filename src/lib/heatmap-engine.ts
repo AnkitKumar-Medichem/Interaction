@@ -564,53 +564,56 @@ export function generateInteractionHeatmap(options: HeatmapOptions): HeatmapResp
   const comp2 = compounds.length > 1 ? compounds[1] : null;
   const comp2Name = comp2 ? comp2.name || "Compound 2" : "Intramolecular";
 
-  // By default, every heatmap includes the 6 forced degradation & stress conditions
-  const colLabels =
-    options.conditions && options.conditions.length > 0
-      ? options.conditions
-      : [...DEFAULT_CONDITIONS];
+  // Helper to extract clean functional group name without & or parentheses
+  function cleanFgName(raw: string): string {
+    return raw
+      .replace(/^\[[^\]]*\]\s*/, "")
+      .replace(/\s*\([^)]*\)/g, "")
+      .replace(/\s*&.*$/, "")
+      .replace(/\s*↔.*$/, "")
+      .replace(/Reactive Center/i, "Aliphatic Center")
+      .trim();
+  }
 
-  // Build row labels from the reactive centers of the compound(s)
-  const rowLabels: string[] = [];
+  // Functional groups placed on X-axis (colLabels)
+  const colLabels: string[] = [];
 
   const c1Sites = (comp1.interactionSites && comp1.interactionSites.length > 0)
     ? comp1.interactionSites
     : (comp1.features && comp1.features.length > 0)
     ? comp1.features
-    : ["Primary Reactive Center"];
+    : ["Aliphatic Center"];
 
-  if (!comp2) {
-    // Single compound: List its reactive sites directly
-    for (const s of c1Sites.slice(0, 5)) {
-      rowLabels.push(s.trim());
+  for (const s of c1Sites.slice(0, 5)) {
+    const c = cleanFgName(s);
+    if (c && !colLabels.includes(c)) {
+      colLabels.push(c);
     }
-    if (rowLabels.length < 3) {
-      rowLabels.push("Intramolecular Coupling Center");
-    }
-  } else {
-    // Multi-compound mixture: Include sites from both compounds and their interface
-    for (const s of c1Sites.slice(0, 3)) {
-      rowLabels.push(`[${comp1Name}] ${s.trim()}`);
-    }
+  }
 
+  if (comp2) {
     const c2Sites = (comp2.interactionSites && comp2.interactionSites.length > 0)
       ? comp2.interactionSites
       : (comp2.features && comp2.features.length > 0)
       ? comp2.features
-      : ["Additive Functional Center"];
-
-    for (const s of c2Sites.slice(0, 3)) {
-      rowLabels.push(`[${comp2Name}] ${s.trim()}`);
+      : ["Additive Center"];
+    for (const s of c2Sites.slice(0, 4)) {
+      const c = cleanFgName(s);
+      if (c && !colLabels.includes(c)) {
+        colLabels.push(c);
+      }
     }
-
-    // Binary interface
-    rowLabels.push(`${comp1Name} ↔ ${comp2Name} Interface`);
   }
 
-  // Ensure non-empty
-  if (rowLabels.length === 0) {
-    rowLabels.push("Active Degradation Center");
+  if (colLabels.length === 0) {
+    colLabels.push("Aliphatic Framework");
   }
+
+  // Conditions placed on Y-axis (rowLabels)
+  const rowLabels: string[] =
+    options.conditions && options.conditions.length > 0
+      ? options.conditions
+      : [...DEFAULT_CONDITIONS];
 
   const matrix: number[][] = [];
   const details: ReactiveInteractionDetail[] = [];
@@ -627,9 +630,9 @@ export function generateInteractionHeatmap(options: HeatmapOptions): HeatmapResp
 
   for (let r = 0; r < rowLabels.length; r++) {
     const rowRow: number[] = [];
+    const conditionLabel = rowLabels[r];
     for (let c = 0; c < colLabels.length; c++) {
-      const siteLabel = rowLabels[r];
-      const conditionLabel = colLabels[c];
+      const siteLabel = colLabels[c];
 
       const res = calculateConditionVulnerability(siteLabel, conditionLabel, compounds);
       const hashOffset = ((hashPair(siteLabel + conditionLabel) % 9) - 4) * 0.01;
@@ -639,8 +642,8 @@ export function generateInteractionHeatmap(options: HeatmapOptions): HeatmapResp
       details.push({
         row: r,
         col: c,
-        rowLabel: siteLabel,
-        colLabel: conditionLabel,
+        rowLabel: conditionLabel,
+        colLabel: siteLabel,
         score,
         percentage: `${Math.round(score * 100)}%`,
         mechanism: res.mechanism,
@@ -691,15 +694,6 @@ export function generateInteractionHeatmap(options: HeatmapOptions): HeatmapResp
             stroke="#CBD5E1"
             stroke-width="0.75"
           />
-          <text
-            x="${x + cellWidth / 2}"
-            y="${y + cellHeight / 2 + 5}"
-            font-family="system-ui, -apple-system, sans-serif"
-            font-size="13"
-            font-weight="700"
-            fill="${textColor}"
-            text-anchor="middle"
-          >${val.toFixed(2)}</text>
         </g>
       `;
     }

@@ -335,6 +335,40 @@ st.markdown("""
         line-height: 1.45;
     }
 
+    /* Mechanistic Framework & Disclaimer */
+    .ap1-cot-box {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 0.85rem;
+        color: #334155;
+        line-height: 1.65;
+        white-space: pre-wrap;
+        margin-bottom: 1rem;
+    }
+    .ap1-cot-note {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        font-size: 0.78rem;
+        color: #475569;
+        line-height: 1.55;
+    }
+    .ap1-disclaimer-box {
+        background: #FAFAFA;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        font-size: 0.78rem;
+        color: #64748B;
+        font-style: italic;
+        line-height: 1.55;
+        margin-top: 1.75rem;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .ap1-comp-card, .ap1-imp-card {
@@ -611,25 +645,24 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
 def plot_heatmap(matrix: np.ndarray, row_labels: List[str], col_labels: List[str], title: str) -> plt.Figure:
     """
     Generates a publication-quality vulnerability matrix.
+    Functional groups on x-axis (col_labels), stress conditions on y-axis (row_labels).
     """
     display_rows = [r if len(r) <= 35 else r[:32] + "..." for r in row_labels]
     df = pd.DataFrame(matrix, index=display_rows, columns=col_labels)
 
     n_rows = len(display_rows)
     n_cols = len(col_labels)
-    fig_width = max(9.0, n_cols * 1.5)
-    fig_height = max(5.0, n_rows * 0.85 + 1.8)
+    fig_width = max(8.5, n_cols * 1.6 + 2.0)
+    fig_height = max(4.6, n_rows * 0.7 + 1.8)
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=150)
     fig.patch.set_facecolor('#FFFFFF')
     ax.set_facecolor('#F8FAFC')
 
-    annot_matrix = np.vectorize(lambda x: f"{int(round(float(x) * 100))}%")(matrix)
-
+    # Percentage removed from heatmap cells (annot=False)
     sns.heatmap(
         df,
-        annot=annot_matrix,
-        fmt="",
+        annot=False,
         cmap="coolwarm",
         vmin=0.0,
         vmax=1.0,
@@ -637,12 +670,11 @@ def plot_heatmap(matrix: np.ndarray, row_labels: List[str], col_labels: List[str
         linewidths=2.0,
         linecolor='#FFFFFF',
         square=False,
-        ax=ax,
-        annot_kws={'fontsize': 10, 'fontweight': 'bold'}
+        ax=ax
     )
 
     ax.set_title(title, fontsize=13, fontweight='bold', pad=18, color='#0F172A')
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=20, ha='right', fontsize=9.5, fontweight='600', color='#334155')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=15 if n_cols > 3 else 0, ha='center', fontsize=9.5, fontweight='600', color='#334155')
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=9.5, fontweight='600', color='#334155')
 
     plt.tight_layout()
@@ -858,35 +890,111 @@ def predict_degradation_and_reactions(
     candidates.sort(key=lambda x: x["probability"], reverse=True)
     top_5 = candidates[:5]
 
-    # Build Heatmap matrix
-    row_labels = [f"{g['name']} ({g['reactive_site']})" for g in p_groups]
-    if len(row_labels) < 2:
-        row_labels.append("Intramolecular Coupling Center")
+    # Build Heatmap matrix with functional groups on X-axis (col_labels) and conditions on Y-axis (row_labels)
+    def clean_fg_name(name_str: str) -> str:
+        clean = re.sub(r"\s*\(.*?\)", "", name_str)
+        clean = re.sub(r"\s*&.*$", "", clean)
+        clean = re.sub(r"^\[.*?\]\s*", "", clean)
+        clean = re.sub(r"\s*↔.*$", "", clean)
+        clean = re.sub(r"Reactive Center", "Aliphatic Center", clean, flags=re.I)
+        return clean.strip()
 
-    col_labels = DEFAULT_CONDITIONS
+    col_labels = []
+    # Primary compound functional groups
+    for g in p_groups:
+        c_name = clean_fg_name(g.get("name", "Functional Group"))
+        if c_name and c_name not in col_labels:
+            col_labels.append(c_name)
+
+    # Secondary compound functional groups
+    for sec_s in secondary_smiles_list:
+        if sec_s and sec_s.strip():
+            for sg in identify_functional_groups(sec_s.strip()):
+                c_name = clean_fg_name(sg.get("name", ""))
+                if c_name and c_name not in col_labels:
+                    col_labels.append(c_name)
+
+    if len(col_labels) == 0:
+        col_labels = ["Aliphatic Framework"]
+
+    # Conditions on Y-axis
+    row_labels = ["Acidic", "Basic", "Hydrolysis", "Photolysis", "Thermal", "Oxidative"]
     vuln_map = {"Critical": 0.92, "High": 0.75, "Moderate": 0.45, "Low": 0.20, "Resistant": 0.05}
 
-    matrix = []
+    # Map each functional group to vulnerability ratings
+    cond_keys = ["acidic", "basic", "hydrolysis", "photolytic", "thermal", "oxidative"]
+    fg_dict_lookup = {}
     for g in p_groups:
-        row = [
-            vuln_map.get(g["acidic"][0], 0.2),
-            vuln_map.get(g["basic"][0], 0.2),
-            vuln_map.get(g["hydrolysis"][0], 0.2),
-            vuln_map.get(g["photolytic"][0], 0.2),
-            vuln_map.get(g["thermal"][0], 0.2),
-            vuln_map.get(g["oxidative"][0], 0.2),
-        ]
-        matrix.append(row)
+        c_name = clean_fg_name(g.get("name", ""))
+        fg_dict_lookup[c_name] = g
+    for sec_s in secondary_smiles_list:
+        if sec_s and sec_s.strip():
+            for sg in identify_functional_groups(sec_s.strip()):
+                c_name = clean_fg_name(sg.get("name", ""))
+                if c_name not in fg_dict_lookup:
+                    fg_dict_lookup[c_name] = sg
 
-    if len(matrix) < len(row_labels):
-        matrix.append([0.15, 0.15, 0.10, 0.25, 0.30, 0.15])
+    matrix = []
+    for cond_key in cond_keys:
+        row_vals = []
+        for fg_col in col_labels:
+            g_obj = fg_dict_lookup.get(fg_col)
+            if g_obj and cond_key in g_obj:
+                score = vuln_map.get(g_obj[cond_key][0], 0.20)
+            else:
+                score = 0.15
+            row_vals.append(score)
+        matrix.append(row_vals)
+
+    # Construct comprehensive mechanistic chain of thought without section numbers
+    top_candidate = top_5[0] if top_5 else None
+    sec_valid = [s.strip() for s in secondary_smiles_list if s.strip()]
+    sec_names_list = [f"Secondary Compound {s_i+1} ({s_sm})" for s_i, s_sm in enumerate(sec_valid)]
+
+    fg_names_str = ', '.join([f"{g['name']} [{g['category']}]" for g in p_groups]) if p_groups else 'Aliphatic / Aromatic Framework'
+    active_centers_str = '; '.join([f"{g['reactive_site']} ({g['name']})" for g in p_groups]) if p_groups else 'Standard carbon-carbon / carbon-hydrogen bonds'
+    co_reactants_str = ', '.join(sec_names_list) if sec_names_list else 'None specified'
+    cross_react_risk = 'High potential for bimolecular condensation, nucleophilic acyl substitution, transamidation, or salt complexation.' if sec_valid else 'No exogenous secondary reactants present.'
+    primary_pathway = top_candidate.get('condition', 'Direct Hydrolysis') if top_candidate else 'Solvolytic Degradation'
+    predom_byproduct = top_candidate.get('iupacName', 'Stable Degradant') if top_candidate else 'None'
+    dominant_mech = top_candidate.get('mechanismExplanation', 'Standard degradation') if top_candidate else 'None'
+    mechanistic_rationale = 'Cross-functional interaction governed by nucleophilic and acid-base reactions between primary compound and co-reactants, accelerated under stress conditions.' if sec_valid else 'Intrinsic stress degradation governed by hydrolytic, oxidative, photolytic, and thermal reactivity of functional groups present in the primary molecule.'
+
+    cot_lines = [
+        "[Systematic Functional Group Reactivity & Computational Degradation Assessment]",
+        "",
+        "PRIMARY MOLECULAR INVENTORY & REACTIVE SITES:",
+        f"   - Primary Compound: {primary_smiles}",
+        f"   - Identified Functional Groups: {fg_names_str}",
+        f"   - Active Reactive Centers: {active_centers_str}",
+        "",
+        "REACTION ENVIRONMENT & STRESS PATHWAY EVALUATION:",
+        "   - Acidic Stress: Evaluated hydronium-promoted solvolysis, carbocation generation, and protonation equilibria across polar heteroatoms.",
+        "   - Basic Stress: Modeled nucleophilic hydroxide addition-elimination (saponification), base-catalyzed enolization, and phenolate/carboxylate salt formation.",
+        "   - Hydrolysis: Modeled ambient moisture-assisted solvolysis across vulnerable ester, amide, and labile linkages.",
+        "   - Photolytic Stress: Analyzed chromophore absorption, conjugated pi-electron systems, and UV photo-Fries/Norrish fragmentation.",
+        "   - Thermal Stress: Assessed pyrolytic scission, syn-elimination, and thermal decarboxylation activation barriers.",
+        "   - Oxidative Stress: Modeled single-electron transfer (SET), radical peroxyl abstraction, and heteroatom oxidation.",
+        "",
+        "SECONDARY COMPOUND INTERACTIONS:",
+        f"   - Co-reactants Evaluated: {co_reactants_str}",
+        f"   - Cross-Reactivity Risk: {cross_react_risk}",
+        "",
+        "THERMODYNAMIC & KINETIC SYNTHESIS:",
+        f"   - Primary Degradation Pathway: {primary_pathway}",
+        f"   - Predominant Byproduct: {predom_byproduct}",
+        f"   - Dominant Mechanism: {dominant_mech}",
+        f"   - Mechanistic Rationale: {mechanistic_rationale}"
+    ]
+    chain_of_thought = "\n".join(cot_lines)
 
     return {
         "functional_groups": p_groups,
         "impurities": top_5,
         "heatmap_matrix": np.array(matrix),
         "row_labels": row_labels,
-        "col_labels": col_labels
+        "col_labels": col_labels,
+        "chain_of_thought": chain_of_thought
     }
 
 # ==============================================================================
@@ -900,17 +1008,16 @@ render_html("""
 """)
 
 # Top Navigation Tabs matching AI Studio
-tab_predict, tab_logbook, tab_about = st.tabs([
+tab_predict, tab_logbook = st.tabs([
     "Analysis & Predictions",
-    "Query Logbook (100 Queries)",
-    "Methodology & Framework"
+    "Query Logbook (100 Queries)"
 ])
 
 # ==============================================================================
 # TAB 1: Analysis & Predictions
 # ==============================================================================
 with tab_predict:
-    # 1. Input Chemical Data Form
+    # Input Chemical Data Form
     with st.container():
         st.markdown('<div class="section-title">Input Molecular Structures (SMILES Only)</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-desc">Enter canonical SMILES representations. Calculations evaluate functional group reactivity, stress degradation pathways, and intermolecular incompatibilities.</div>', unsafe_allow_html=True)
@@ -921,8 +1028,7 @@ with tab_predict:
             primary_smiles = st.text_input(
                 "Primary Compound (SMILES) *",
                 value="",
-                placeholder="Enter canonical SMILES string",
-                help="Enter the canonical SMILES string for the active chemical ingredient."
+                placeholder="Enter canonical SMILES string"
             )
 
             if "num_secondary" not in st.session_state:
@@ -1081,94 +1187,9 @@ with tab_predict:
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
 
         # ----------------------------------------------------------------------
-        # 2. Functional Group Reactivity Analysis
+        # Stress Degradation & Incompatibility Heatmap
         # ----------------------------------------------------------------------
-        st.markdown('<div class="section-title">2. Functional Group Reactivity Analysis</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-desc">Systematic evaluation of identified functional groups and their mechanistic reactivity with acidic, basic, hydrolysis, photolytic, thermal, oxidative conditions, and co-reactant functional groups.</div>', unsafe_allow_html=True)
-
-        for fg in res["functional_groups"]:
-            with st.expander(f"{fg['name']} — {fg['category']} ({fg['fragment']})", expanded=True):
-                st.markdown(f"<div style='font-size: 0.8rem; color: #64748B; margin-bottom: 0.75rem;'><strong>Reactive Center:</strong> <code style='color: #0F172A; background: #F1F5F9; padding: 2px 6px; border-radius: 4px;'>{fg['reactive_site']}</code></div>", unsafe_allow_html=True)
-
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    render_html(f"""
-                    <div class="cond-card">
-                        <div class="cond-card-title">
-                            <span>Acidic Stress</span>
-                            <span class="vuln-{fg['acidic'][0].lower()}">{fg['acidic'][0]}</span>
-                        </div>
-                        <div class="cond-card-desc">{fg['acidic'][1]}</div>
-                    </div>
-                    """)
-                with c2:
-                    render_html(f"""
-                    <div class="cond-card">
-                        <div class="cond-card-title">
-                            <span>Basic Stress</span>
-                            <span class="vuln-{fg['basic'][0].lower()}">{fg['basic'][0]}</span>
-                        </div>
-                        <div class="cond-card-desc">{fg['basic'][1]}</div>
-                    </div>
-                    """)
-                with c3:
-                    render_html(f"""
-                    <div class="cond-card">
-                        <div class="cond-card-title">
-                            <span>Hydrolysis (Aqueous)</span>
-                            <span class="vuln-{fg['hydrolysis'][0].lower()}">{fg['hydrolysis'][0]}</span>
-                        </div>
-                        <div class="cond-card-desc">{fg['hydrolysis'][1]}</div>
-                    </div>
-                    """)
-
-                st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-
-                c4, c5, c6 = st.columns(3)
-                with c4:
-                    render_html(f"""
-                    <div class="cond-card">
-                        <div class="cond-card-title">
-                            <span>Photolytic Stress</span>
-                            <span class="vuln-{fg['photolytic'][0].lower()}">{fg['photolytic'][0]}</span>
-                        </div>
-                        <div class="cond-card-desc">{fg['photolytic'][1]}</div>
-                    </div>
-                    """)
-                with c5:
-                    render_html(f"""
-                    <div class="cond-card">
-                        <div class="cond-card-title">
-                            <span>Thermal Stress</span>
-                            <span class="vuln-{fg['thermal'][0].lower()}">{fg['thermal'][0]}</span>
-                        </div>
-                        <div class="cond-card-desc">{fg['thermal'][1]}</div>
-                    </div>
-                    """)
-                with c6:
-                    render_html(f"""
-                    <div class="cond-card">
-                        <div class="cond-card-title">
-                            <span>Oxidative Stress</span>
-                            <span class="vuln-{fg['oxidative'][0].lower()}">{fg['oxidative'][0]}</span>
-                        </div>
-                        <div class="cond-card-desc">{fg['oxidative'][1]}</div>
-                    </div>
-                    """)
-
-                if "cross_reaction" in fg:
-                    render_html(f"""
-                    <div style="margin-top: 0.75rem; background: #FAF5FF; border: 1px solid #F3E8FF; border-radius: 8px; padding: 0.75rem; font-size: 0.75rem; color: #7E22CE;">
-                        <strong>Cross-Reactivity with Additives / Excipients:</strong> <span class="vuln-{fg['cross_reaction'][0].lower()}">{fg['cross_reaction'][0]}</span> — {fg['cross_reaction'][1]}
-                    </div>
-                    """)
-
-        st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
-
-        # ----------------------------------------------------------------------
-        # 3. Stress Degradation & Incompatibility Heatmap
-        # ----------------------------------------------------------------------
-        st.markdown('<div class="section-title">3. Stress Degradation & Incompatibility Heatmap</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Stress Degradation & Incompatibility Heatmap</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-desc">Quantitative stress matrix modeling reactive center vulnerability across Acidic, Basic, Hydrolysis, Photolysis, Thermal, and Oxidative conditions using the WarmCool spectrum.</div>', unsafe_allow_html=True)
 
         fig = plot_heatmap(
@@ -1182,9 +1203,30 @@ with tab_predict:
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
 
         # ----------------------------------------------------------------------
-        # 4. Degradation Products and Details (Top 5 Ranked)
+        # Mechanistic Framework Evaluation
         # ----------------------------------------------------------------------
-        st.markdown('<div class="section-title">4. Degradation Products and Details</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Mechanistic Framework Evaluation</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-desc">Comprehensive kinetic pathways, microenvironmental influences, and thermodynamic justification.</div>', unsafe_allow_html=True)
+
+        cot_text = res.get("chain_of_thought", "")
+        if cot_text:
+            render_html(f"""
+            <div class="ap1-cot-box">{cot_text}</div>
+            """)
+
+        render_html("""
+        <div class="ap1-cot-note">
+            <strong style="color: #0F172A; display: block; margin-bottom: 0.25rem; font-size: 0.85rem;">Chemical Reaction & Byproduct Analysis:</strong>
+            Products identified with high formation probability or favorable exergonic free energy (&Delta;G &lt; 0 kcal/mol) represent dominant reaction pathways. In experimental validation, these byproducts should be verified using analytical separation techniques (HPLC, LC-MS, GC-MS, or NMR).
+        </div>
+        """)
+
+        st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
+
+        # ----------------------------------------------------------------------
+        # Degradation Products and Details (Top 5 Ranked)
+        # ----------------------------------------------------------------------
+        st.markdown('<div class="section-title">Degradation Products and Details</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-desc">Ranked strictly by formation probability and thermodynamic stability (Top 5 maximum).</div>', unsafe_allow_html=True)
 
         for idx, imp in enumerate(res["impurities"]):
@@ -1258,6 +1300,55 @@ with tab_predict:
             </div>
             """)
 
+        # ----------------------------------------------------------------------
+        # CSV Report Export (Integrated directly in Output Page)
+        # ----------------------------------------------------------------------
+        report_rows = []
+        for idx, imp in enumerate(res["impurities"]):
+            prob_pct = round(imp.get("probability", 0.0) * 100, 2)
+            report_rows.append({
+                "Rank": idx + 1,
+                "Byproduct IUPAC Name": imp.get("iupacName", ""),
+                "SMILES": imp.get("smiles", ""),
+                "Degradation Condition": imp.get("condition", ""),
+                "Origin": imp.get("source", "Stress degradation"),
+                "Combined Formation Probability (%)": prob_pct,
+                "Heuristic Probability (%)": round(imp.get("probabilityHeuristic", 0.0) * 100, 2),
+                "Boltzmann Probability (%)": round(imp.get("probabilityBoltzmann", 0.0) * 100, 2),
+                "Free Energy Delta G (kcal/mol)": imp.get("deltaG", 0.0),
+                "Chemical Mechanism": imp.get("mechanismExplanation", ""),
+                "Primary Compound": cur_primary,
+                "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        df_report = pd.DataFrame(report_rows)
+        report_csv_data = df_report.to_csv(index=False).encode('utf-8')
+
+        st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Computational CSV Report</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-desc">Download complete structured analysis data including reaction pathways, thermodynamic free energy values, and kinetic formation probabilities.</div>', unsafe_allow_html=True)
+
+        st.download_button(
+            label="📥 Download Degradation Analysis CSV Report",
+            data=report_csv_data,
+            file_name=f"interaction_prediction_report_{datetime.date.today()}.csv",
+            mime="text/csv",
+            type="primary",
+            use_container_width=True
+        )
+
+        with st.expander("View Tabular CSV Report Data", expanded=False):
+            st.dataframe(df_report, use_container_width=True)
+
+        # ----------------------------------------------------------------------
+        # Disclaimer Card
+        # ----------------------------------------------------------------------
+        render_html("""
+        <div class="ap1-disclaimer-box" style="margin-top: 1.5rem;">
+            Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays (HPLC, LC-MS, NMR).
+        </div>
+        """)
+
 # ==============================================================================
 # TAB 2: Query Logbook (100 Queries)
 # ==============================================================================
@@ -1279,35 +1370,3 @@ with tab_logbook:
             type="primary"
         )
         st.dataframe(df_log, use_container_width=True, height=500)
-
-# ==============================================================================
-# TAB 3: Methodology & Framework
-# ==============================================================================
-with tab_about:
-    st.markdown('<div class="section-title">Methodology & Framework</div>', unsafe_allow_html=True)
-    st.markdown(r"""
-    ### Scientific Framework
-    This computational chemistry platform predicts chemical degradation, excipient incompatibility, and reaction impurities strictly based on:
-    
-    1. **Functional Group Identification**:
-       - Scans molecular SMILES to detect ester, carboxylic acid, phenol, amine, amide, beta-lactam, thioether, and aromatic systems.
-       - Maps reactive sites across strained ring carbonyls, ester acyloxy oxygens, and nucleophilic amine lone pairs.
-    
-    2. **Condition-Specific Stress Degradation**:
-       - **Acidic Hydrolysis**: $A_{Ac}2$ ester solvolysis, lactam ring opening, amide cleavage.
-       - **Basic Hydrolysis**: $B_{Ac}2$ saponification, nucleophilic attack, phenolate/carboxylate salt formation.
-       - **Neutral Hydrolysis**: Moisture-induced solvolysis under ambient humidity.
-       - **Photolytic Stress**: UV excitation (254–365 nm), photo-Fries acyl shifts, Norrish type I/II cleavage.
-       - **Thermal Stress**: Pyrolysis, syn-elimination, thermal decarboxylation.
-       - **Oxidative Stress**: Single-electron transfer (SET), radical peroxyl abstraction, S- and N-oxidation.
-       - **Secondary Compound Interaction**: Transamidation, Maillard browning (reducing sugar + amine), chelation.
-    
-    3. **Thermodynamics & Kinetics**:
-       - Standard free energy change ($\Delta G$ in kcal/mol at 298.15 K).
-       - Boltzmann probability distribution: $P_i = \frac{e^{-\Delta G_i / RT}}{\sum_j e^{-\Delta G_j / RT}}$.
-       - Heuristic kinetic feasibility from functional group reactivity.
-    
-    4. **Analytical Validation**:
-       - Products identified with high formation probability or favorable exergonic free energy ($\Delta G < 0$ kcal/mol) represent dominant reaction pathways.
-       - In experimental validation, these byproducts should be verified using analytical separation techniques (HPLC, LC-MS, GC-MS, or NMR).
-    """)

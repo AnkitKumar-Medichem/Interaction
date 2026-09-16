@@ -1009,12 +1009,12 @@ export function generateComputationalPrediction(
   // Construct comprehensive mechanistic chain of thought detailing functional group calculations
   const chainOfThought = `[Systematic Functional Group Reactivity & Computational Degradation Assessment]
 
-1. PRIMARY MOLECULAR FUNCTIONAL GROUP INVENTORY:
+PRIMARY MOLECULAR FUNCTIONAL GROUP INVENTORY:
    - Target Structure: ${primaryName} (SMILES: ${primarySmiles})
    - Identified Functional Groups: ${pFunctionalGroups.map(g => `${g.groupName} [${g.category}]`).join(", ")}
    - Identified Reactive Centers: ${pSites.join("; ")}
 
-2. REACTION SUSCEPTIBILITY BY STRESS CONDITION:
+REACTION SUSCEPTIBILITY BY STRESS CONDITION:
    - Acidic Stress: Evaluated acid-promoted solvolysis, carbocation generation, and protonation pathways across active functional groups.
    - Basic Stress: Evaluated base-promoted nucleophilic acyl substitutions (B_Ac2), hydroxide attack, and alpha-deprotonation.
    - Hydrolysis: Modeled ambient neutral aqueous solvolysis and humidity-driven cleavage.
@@ -1022,12 +1022,12 @@ export function generateComputationalPrediction(
    - Thermal Stress: Calculated activation barriers (Ea) for thermal decarboxylation, syn-elimination, and condensation.
    - Oxidative Stress: Computed single-electron transfer (SET) potential, radical peroxyl abstraction, and heteroatom S/N-oxidation.
 
-${hasCoReactant ? `3. CROSS-FUNCTIONAL INTERACTIONS WITH CO-REACTANTS:
+${hasCoReactant ? `CROSS-FUNCTIONAL INTERACTIONS WITH CO-REACTANTS:
    - Co-reactant Evaluated: ${coReactantName} (SMILES: ${coReactantSmiles})
    - Co-reactant Functional Groups: ${coReactantFunctionalGroups.map(g => g.groupName).join(", ") || "Standard Excipient"}
-   - Cross-Reaction Mechanism: Evaluated transesterification, transamidation, Maillard Schiff base condensation, and microenvironmental pH modulation.` : "3. MULTI-COMPONENT MATRIX: Single-compound intrinsic forced degradation analysis."}
+   - Cross-Reaction Mechanism: Evaluated transesterification, transamidation, Maillard Schiff base condensation, and microenvironmental pH modulation.` : "MULTI-COMPONENT MATRIX: Single-compound intrinsic forced degradation analysis."}
 
-4. THERMODYNAMIC BOLTZMANN PARTITION & KINETIC PROBABILITIES (T = 298.15 K):
+THERMODYNAMIC BOLTZMANN PARTITION & KINETIC PROBABILITIES (T = 298.15 K):
    - Calculated relative formation free energies (ΔG) from standard bond dissociation/formation increments.
    - Boltzmann distribution derived via P_i = exp(-ΔG_i / RT) / Σ exp(-ΔG_j / RT).
    - Ranked top 5 dominant degradation impurities and reaction adducts.`;
