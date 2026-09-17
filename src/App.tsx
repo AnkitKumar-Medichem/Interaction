@@ -228,13 +228,23 @@ export default function App() {
 
       // 1. Compounds Section
       rows.push(["INPUT COMPOUNDS"]);
-      rows.push(["Role", "Name", "SMILES", "MW (g/mol)", "Features", "Interaction Sites"]);
+      rows.push(["Role", "Name", "SMILES", "MW (g/mol)", "LogP", "TPSA (Å²)", "HBD", "HBA", "NumRotBonds", "HeavyAtoms", "AromRings", "Heteroatoms", "FractionCSP3", "Features", "Interaction Sites"]);
       result.compounds.forEach((c, idx) => {
+        const d = c.molecularDescriptors;
         rows.push([
           idx === 0 ? "Primary" : "Secondary",
           c.name,
           c.smiles,
-          c.molecularDescriptors?.MolWt != null ? c.molecularDescriptors.MolWt.toFixed(2) : "N/A",
+          d?.MolWt != null ? d.MolWt.toFixed(2) : "N/A",
+          d?.MolLogP != null ? d.MolLogP.toFixed(2) : "N/A",
+          d?.TPSA != null ? d.TPSA.toFixed(2) : "N/A",
+          d?.HBD != null ? d.HBD : "N/A",
+          d?.HBA != null ? d.HBA : "N/A",
+          d?.NumRotatableBonds != null ? d.NumRotatableBonds : "N/A",
+          d?.HeavyAtomCount != null ? d.HeavyAtomCount : "N/A",
+          d?.NumAromaticRings != null ? d.NumAromaticRings : "N/A",
+          d?.NumHeteroatoms != null ? d.NumHeteroatoms : "N/A",
+          d?.FractionCSP3 != null ? d.FractionCSP3 : "N/A",
           c.features.join(", "),
           c.interactionSites?.join(", ") || "N/A"
         ]);
@@ -251,7 +261,10 @@ export default function App() {
         const hasEnergy = topImpurities.some(i => i.relativeEnergy != null);
         const hasBoth = topImpurities.some(i => i.probabilityHeuristic != null);
         
-        const header = ["IUPAC Name", "SMILES", "MW (g/mol)", "Main Probability (%)"];
+        const header = [
+          "IUPAC Name", "SMILES", "MW (g/mol)", "LogP", "TPSA (Å²)", "HBD", "HBA", 
+          "NumRotBonds", "HeavyAtoms", "AromRings", "Heteroatoms", "FractionCSP3", "Main Probability (%)"
+        ];
         if (hasBoth) {
           header.push("Heuristic (%)", "Boltzmann (%)");
         }
@@ -260,10 +273,20 @@ export default function App() {
         rows.push(header);
 
         topImpurities.forEach(i => {
+            const d = i.molecularDescriptors;
             const row = [
               i.iupacName,
               i.smiles,
-              i.molecularDescriptors?.MolWt != null ? i.molecularDescriptors.MolWt.toFixed(2) : "N/A",
+              d?.MolWt != null ? d.MolWt.toFixed(2) : "N/A",
+              d?.MolLogP != null ? d.MolLogP.toFixed(2) : "N/A",
+              d?.TPSA != null ? d.TPSA.toFixed(2) : "N/A",
+              d?.HBD != null ? d.HBD : "N/A",
+              d?.HBA != null ? d.HBA : "N/A",
+              d?.NumRotatableBonds != null ? d.NumRotatableBonds : "N/A",
+              d?.HeavyAtomCount != null ? d.HeavyAtomCount : "N/A",
+              d?.NumAromaticRings != null ? d.NumAromaticRings : "N/A",
+              d?.NumHeteroatoms != null ? d.NumHeteroatoms : "N/A",
+              d?.FractionCSP3 != null ? d.FractionCSP3 : "N/A",
               i.probability != null ? (i.probability * 100).toFixed(1) : "N/A"
             ];
             if (hasBoth) {
@@ -637,8 +660,35 @@ export default function App() {
                             {comp.smiles}
                           </div>
                         )}
-                        <div className="ap1-tag-group">
+                        <div className="ap1-tag-group flex flex-wrap gap-1.5 mt-2">
                           {mw && <span className="ap1-pill mw">MW: {mw.toFixed(2)} g/mol</span>}
+                          {comp.molecularDescriptors?.MolLogP != null && (
+                            <span className="ap1-pill" title="Partition Coefficient (LogP)">LogP: {comp.molecularDescriptors.MolLogP}</span>
+                          )}
+                          {comp.molecularDescriptors?.TPSA != null && (
+                            <span className="ap1-pill" title="Topological Polar Surface Area (Å²)">TPSA: {comp.molecularDescriptors.TPSA} Å²</span>
+                          )}
+                          {comp.molecularDescriptors?.HBD != null && (
+                            <span className="ap1-pill" title="Hydrogen Bond Donors">HBD: {comp.molecularDescriptors.HBD}</span>
+                          )}
+                          {comp.molecularDescriptors?.HBA != null && (
+                            <span className="ap1-pill" title="Hydrogen Bond Acceptors">HBA: {comp.molecularDescriptors.HBA}</span>
+                          )}
+                          {comp.molecularDescriptors?.NumRotatableBonds != null && (
+                            <span className="ap1-pill" title="Number of Rotatable Bonds">RotB: {comp.molecularDescriptors.NumRotatableBonds}</span>
+                          )}
+                          {comp.molecularDescriptors?.HeavyAtomCount != null && (
+                            <span className="ap1-pill" title="Heavy Atom Count">HeavyAtoms: {comp.molecularDescriptors.HeavyAtomCount}</span>
+                          )}
+                          {comp.molecularDescriptors?.NumAromaticRings != null && (
+                            <span className="ap1-pill" title="Number of Aromatic Rings">AromRings: {comp.molecularDescriptors.NumAromaticRings}</span>
+                          )}
+                          {comp.molecularDescriptors?.NumHeteroatoms != null && (
+                            <span className="ap1-pill" title="Number of Heteroatoms">Heteroatoms: {comp.molecularDescriptors.NumHeteroatoms}</span>
+                          )}
+                          {comp.molecularDescriptors?.FractionCSP3 != null && (
+                            <span className="ap1-pill" title="Fraction of sp3 Carbons (Fsp3)">Fsp3: {comp.molecularDescriptors.FractionCSP3}</span>
+                          )}
                           {(comp.features || []).map((f, fi) => (
                             <span key={fi} className="ap1-pill">{f}</span>
                           ))}
@@ -733,9 +783,36 @@ export default function App() {
                           <div className="ap1-imp-header">
                             <div>
                               <div className="ap1-imp-title">{imp.iupacName || "Product"}</div>
-                              <div className="mt-1.5 flex gap-2">
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
                                 {imp.molecularDescriptors?.MolWt && (
                                   <span className="ap1-pill mw">MW: {imp.molecularDescriptors.MolWt.toFixed(2)} g/mol</span>
+                                )}
+                                {imp.molecularDescriptors?.MolLogP != null && (
+                                  <span className="ap1-pill" title="Partition Coefficient (LogP)">LogP: {imp.molecularDescriptors.MolLogP}</span>
+                                )}
+                                {imp.molecularDescriptors?.TPSA != null && (
+                                  <span className="ap1-pill" title="Topological Polar Surface Area (Å²)">TPSA: {imp.molecularDescriptors.TPSA} Å²</span>
+                                )}
+                                {imp.molecularDescriptors?.HBD != null && (
+                                  <span className="ap1-pill" title="Hydrogen Bond Donors">HBD: {imp.molecularDescriptors.HBD}</span>
+                                )}
+                                {imp.molecularDescriptors?.HBA != null && (
+                                  <span className="ap1-pill" title="Hydrogen Bond Acceptors">HBA: {imp.molecularDescriptors.HBA}</span>
+                                )}
+                                {imp.molecularDescriptors?.NumRotatableBonds != null && (
+                                  <span className="ap1-pill" title="Number of Rotatable Bonds">RotB: {imp.molecularDescriptors.NumRotatableBonds}</span>
+                                )}
+                                {imp.molecularDescriptors?.HeavyAtomCount != null && (
+                                  <span className="ap1-pill" title="Heavy Atom Count">HeavyAtoms: {imp.molecularDescriptors.HeavyAtomCount}</span>
+                                )}
+                                {imp.molecularDescriptors?.NumAromaticRings != null && (
+                                  <span className="ap1-pill" title="Number of Aromatic Rings">AromRings: {imp.molecularDescriptors.NumAromaticRings}</span>
+                                )}
+                                {imp.molecularDescriptors?.NumHeteroatoms != null && (
+                                  <span className="ap1-pill" title="Number of Heteroatoms">Heteroatoms: {imp.molecularDescriptors.NumHeteroatoms}</span>
+                                )}
+                                {imp.molecularDescriptors?.FractionCSP3 != null && (
+                                  <span className="ap1-pill" title="Fraction of sp3 Carbons (Fsp3)">Fsp3: {imp.molecularDescriptors.FractionCSP3}</span>
                                 )}
                               </div>
                             </div>
@@ -788,6 +865,93 @@ export default function App() {
                   })}
                 </div>
               )}
+            </section>
+
+            {/* 5. RDKit Molecular Descriptors Comparison (Input vs. Output) */}
+            <section className="space-y-3">
+              <div>
+                <h3 className="section-title">RDKit Molecular Descriptors Comparison</h3>
+                <p className="section-desc">
+                  Cheminformatics descriptors computed via RDKit for both input starting materials and predicted degradation products.
+                </p>
+              </div>
+
+              <div className="border border-[#E2E8F0] rounded-xl bg-white overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#475569] font-semibold">
+                        <th className="py-3 px-3">Role</th>
+                        <th className="py-3 px-3">Molecule</th>
+                        <th className="py-3 px-2 text-right">MW</th>
+                        <th className="py-3 px-2 text-right">LogP</th>
+                        <th className="py-3 px-2 text-right">TPSA</th>
+                        <th className="py-3 px-2 text-right">HBD</th>
+                        <th className="py-3 px-2 text-right">HBA</th>
+                        <th className="py-3 px-2 text-right">RotB</th>
+                        <th className="py-3 px-2 text-right">HeavyAtoms</th>
+                        <th className="py-3 px-2 text-right">AromRings</th>
+                        <th className="py-3 px-2 text-right">Heteroatoms</th>
+                        <th className="py-3 px-2 text-right">Fsp3</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E2E8F0] text-[#1E293B]">
+                      {result.compounds.map((c, idx) => {
+                        const d = c.molecularDescriptors;
+                        return (
+                          <tr key={`comp-row-${idx}`} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-3 font-medium">
+                              <span className={idx === 0 ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] font-semibold" : "text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px] font-semibold"}>
+                                {idx === 0 ? "Input: Primary" : `Input: Sec #${idx}`}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 max-w-[200px]">
+                              <div className="font-semibold text-slate-800 truncate">{c.name}</div>
+                              <div className="font-mono text-[10px] text-slate-500 truncate" title={c.smiles}>{c.smiles}</div>
+                            </td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolWt != null ? d.MolWt.toFixed(2) : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolLogP != null ? d.MolLogP : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.TPSA != null ? d.TPSA : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBD != null ? d.HBD : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBA != null ? d.HBA : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumRotatableBonds != null ? d.NumRotatableBonds : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.HeavyAtomCount != null ? d.HeavyAtomCount : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumAromaticRings != null ? d.NumAromaticRings : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumHeteroatoms != null ? d.NumHeteroatoms : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.FractionCSP3 != null ? d.FractionCSP3 : "-"}</td>
+                          </tr>
+                        );
+                      })}
+                      {(result.degradationImpurities || []).slice(0, 5).map((imp, idx) => {
+                        const d = imp.molecularDescriptors;
+                        return (
+                          <tr key={`imp-row-${idx}`} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-3 font-medium">
+                              <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px] font-semibold">
+                                Output #{idx + 1}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 max-w-[200px]">
+                              <div className="font-semibold text-slate-800 truncate">{imp.iupacName}</div>
+                              <div className="font-mono text-[10px] text-slate-500 truncate" title={imp.smiles}>{imp.smiles}</div>
+                            </td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolWt != null ? d.MolWt.toFixed(2) : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolLogP != null ? d.MolLogP : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.TPSA != null ? d.TPSA : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBD != null ? d.HBD : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBA != null ? d.HBA : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumRotatableBonds != null ? d.NumRotatableBonds : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.HeavyAtomCount != null ? d.HeavyAtomCount : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumAromaticRings != null ? d.NumAromaticRings : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumHeteroatoms != null ? d.NumHeteroatoms : "-"}</td>
+                            <td className="py-2.5 px-2 text-right font-mono">{d?.FractionCSP3 != null ? d.FractionCSP3 : "-"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </section>
 
             {/* 5. Disclaimer Card */}

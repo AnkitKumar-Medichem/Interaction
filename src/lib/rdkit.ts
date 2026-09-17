@@ -15,6 +15,12 @@ export interface MolecularDescriptors {
   MolLogP?: number;
   TPSA?: number;
   NumRotatableBonds?: number;
+  HBD?: number;
+  HBA?: number;
+  HeavyAtomCount?: number;
+  NumAromaticRings?: number;
+  NumHeteroatoms?: number;
+  FractionCSP3?: number;
 }
 
 let rdkitModule: RDKitModule | null = null;
@@ -165,12 +171,18 @@ export async function getMolecularDescriptors(smiles: string): Promise<Molecular
     const raw = JSON.parse(descriptorsJson);
     mol.delete();
     
-    // Normalize keys - extracting MolWt, LogP, TPSA, and RotatableBonds
+    // Normalize keys - extracting all requested RDKit descriptors
     const normalized: MolecularDescriptors = {
-      MolWt: raw.MolWt ?? raw.amw ?? raw.MolWeight ?? raw.mw,
-      MolLogP: raw.MolLogP ?? raw.logp ?? raw.CrippenClogP,
-      TPSA: raw.TPSA ?? raw.tpsa,
-      NumRotatableBonds: raw.NumRotatableBonds ?? raw.numRotatableBonds ?? raw.rotatableBonds,
+      MolWt: raw.MolWt != null ? Number(Number(raw.MolWt).toFixed(2)) : (raw.amw != null ? Number(Number(raw.amw).toFixed(2)) : undefined),
+      MolLogP: raw.MolLogP != null ? Number(Number(raw.MolLogP).toFixed(2)) : (raw.CrippenClogP != null ? Number(Number(raw.CrippenClogP).toFixed(2)) : undefined),
+      TPSA: raw.TPSA != null ? Number(Number(raw.TPSA).toFixed(2)) : undefined,
+      NumRotatableBonds: raw.NumRotatableBonds ?? raw.numRotatableBonds,
+      HBD: raw.NumHBD ?? raw.lipinskiHBD,
+      HBA: raw.NumHBA ?? raw.lipinskiHBA,
+      HeavyAtomCount: raw.NumHeavyAtoms ?? raw.HeavyAtomCount,
+      NumAromaticRings: raw.NumAromaticRings,
+      NumHeteroatoms: raw.NumHeteroatoms,
+      FractionCSP3: raw.FractionCSP3 != null ? Number(Number(raw.FractionCSP3).toFixed(3)) : undefined,
     };
     
     descriptorCache.set(clean, normalized);

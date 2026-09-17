@@ -421,33 +421,70 @@ def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200)
     except Exception:
         pass
 
-    # 2. Resilient fallback to chemical repository depiction API
+    # 2. Resilient fallback to chemical repository depiction API (PubChem with Cactus fallback)
     try:
         encoded = urllib.parse.quote(clean)
-        return f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{encoded}/PNG"
+        # NCI Cactus is resilient when PubChem returns 503 Server Busy
+        return f"https://cactus.nci.nih.gov/chemical/structure/{encoded}/image"
     except Exception:
         return ""
 
 def get_molecular_descriptors(smiles: str) -> Dict[str, Any]:
     """
-    Calculates molecular weight (MW), LogP, and TPSA.
+    Calculates molecular descriptors using RDKit:
+    logP, TPSA, HBD, HBA, NumRotatableBonds, HeavyAtomCount,
+    NumAromaticRings, NumHeteroatoms, FractionCSP3, and MolWt.
     """
     if not smiles or not smiles.strip():
         return {}
+    clean = smiles.strip()
     try:
         from rdkit import Chem
-        from rdkit.Chem import Descriptors
-        mol = Chem.MolFromSmiles(smiles.strip())
+        from rdkit.Chem import Descriptors, rdMolDescriptors
+        mol = Chem.MolFromSmiles(clean)
         if mol is not None:
             return {
-                "mw": round(Descriptors.MolWt(mol), 2),
-                "logp": round(Descriptors.MolLogP(mol), 2),
-                "tpsa": round(Descriptors.TPSA(mol), 2),
-                "rotatable_bonds": Descriptors.NumRotatableBonds(mol)
+                "mw": round(float(Descriptors.MolWt(mol)), 2),
+                "logp": round(float(Descriptors.MolLogP(mol)), 2),
+                "tpsa": round(float(Descriptors.TPSA(mol)), 2),
+                "hbd": int(rdMolDescriptors.CalcNumHBD(mol)),
+                "hba": int(rdMolDescriptors.CalcNumHBA(mol)),
+                "rotatable_bonds": int(Descriptors.NumRotatableBonds(mol)),
+                "heavy_atom_count": int(Descriptors.HeavyAtomCount(mol)),
+                "aromatic_rings": int(Descriptors.NumAromaticRings(mol)),
+                "heteroatoms": int(Descriptors.NumHeteroatoms(mol)),
+                "fraction_csp3": round(float(Descriptors.FractionCSP3(mol)), 3)
             }
     except Exception:
         pass
     return {}
+
+def format_descriptor_pills(desc: Dict[str, Any]) -> str:
+    """Formats calculated RDKit molecular descriptors into styled HTML pills."""
+    if not desc:
+        return ""
+    pills = []
+    if "mw" in desc and desc["mw"] is not None:
+        pills.append(f'<span class="ap1-pill mw" title="Molecular Weight (g/mol)">MW: {desc["mw"]:.2f} g/mol</span>')
+    if "logp" in desc and desc["logp"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Partition Coefficient (LogP)">LogP: {desc["logp"]}</span>')
+    if "tpsa" in desc and desc["tpsa"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Topological Polar Surface Area (Å²)">TPSA: {desc["tpsa"]} Å²</span>')
+    if "hbd" in desc and desc["hbd"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Hydrogen Bond Donors">HBD: {desc["hbd"]}</span>')
+    if "hba" in desc and desc["hba"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Hydrogen Bond Acceptors">HBA: {desc["hba"]}</span>')
+    if "rotatable_bonds" in desc and desc["rotatable_bonds"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Number of Rotatable Bonds">RotB: {desc["rotatable_bonds"]}</span>')
+    if "heavy_atom_count" in desc and desc["heavy_atom_count"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Heavy Atom Count">HeavyAtoms: {desc["heavy_atom_count"]}</span>')
+    if "aromatic_rings" in desc and desc["aromatic_rings"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Number of Aromatic Rings">AromRings: {desc["aromatic_rings"]}</span>')
+    if "heteroatoms" in desc and desc["heteroatoms"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Number of Heteroatoms">Heteroatoms: {desc["heteroatoms"]}</span>')
+    if "fraction_csp3" in desc and desc["fraction_csp3"] is not None:
+        pills.append(f'<span class="ap1-pill" title="Fraction of sp3 Carbons (Fsp3)">Fsp3: {desc["fraction_csp3"]}</span>')
+    return "".join(pills)
 
 # ==============================================================================
 # Persistent CSV Logbook Configuration (Rolling 100 Queries)
@@ -1105,17 +1142,12 @@ with tab_predict:
         # Primary Compound Card
         primary_img = get_chemical_structure_img(cur_primary, width=220, height=200)
         primary_desc = get_molecular_descriptors(cur_primary)
-        primary_mw = primary_desc.get("mw", None)
-        primary_logp = primary_desc.get("logp", None)
-        primary_tpsa = primary_desc.get("tpsa", None)
+        primary_desc_pills = format_descriptor_pills(primary_desc)
 
         p_groups = res.get("functional_groups", [])
         reactive_centers = list(set([g["reactive_site"] for g in p_groups if "reactive_site" in g]))
 
         primary_mol_html = f'<img src="{primary_img}" alt="Primary Compound" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if primary_img else '<div style="color: #94A3B8; font-size: 0.75rem;">Structure diagram unavailable</div>'
-        mw_pill_html = f'<span class="ap1-pill mw">MW: {primary_mw:.2f} g/mol</span>' if primary_mw else ''
-        logp_pill_html = f'<span class="ap1-pill">LogP: {primary_logp}</span>' if primary_logp is not None else ''
-        tpsa_pill_html = f'<span class="ap1-pill">TPSA: {primary_tpsa} Å²</span>' if primary_tpsa is not None else ''
 
         sites_html = ""
         if reactive_centers:
@@ -1146,9 +1178,7 @@ with tab_predict:
                     {cur_primary}
                 </div>
                 <div class="ap1-tag-group">
-                    {mw_pill_html}
-                    {logp_pill_html}
-                    {tpsa_pill_html}
+                    {primary_desc_pills}
                 </div>
                 {sites_html}
             </div>
@@ -1159,9 +1189,8 @@ with tab_predict:
         for s_idx, sec_sm in enumerate(cur_secondary):
             sec_img = get_chemical_structure_img(sec_sm, width=220, height=200)
             sec_desc = get_molecular_descriptors(sec_sm)
-            sec_mw = sec_desc.get("mw", None)
+            sec_desc_pills = format_descriptor_pills(sec_desc)
             sec_mol_html = f'<img src="{sec_img}" alt="Secondary Compound {s_idx+1}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if sec_img else '<div style="color: #94A3B8; font-size: 0.75rem;">Structure diagram unavailable</div>'
-            sec_mw_pill = f'<span class="ap1-pill mw">MW: {sec_mw:.2f} g/mol</span>' if sec_mw else ''
 
             render_html(f"""
             <div class="ap1-comp-card">
@@ -1178,7 +1207,7 @@ with tab_predict:
                         {sec_sm}
                     </div>
                     <div class="ap1-tag-group">
-                        {sec_mw_pill}
+                        {sec_desc_pills}
                     </div>
                 </div>
             </div>
@@ -1248,10 +1277,9 @@ with tab_predict:
             imp_smiles = imp.get("smiles", "")
             imp_img = get_chemical_structure_img(imp_smiles, width=240, height=200)
             imp_desc = get_molecular_descriptors(imp_smiles)
-            imp_mw = imp_desc.get("mw", None)
+            imp_desc_pills = format_descriptor_pills(imp_desc)
 
             imp_mol_html = f'<img src="{imp_img}" alt="Structure of {imp.get("iupacName", "Impurity")}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if imp_img else '<div style="color: #94A3B8; font-size: 0.75rem; text-align: center;">Structure diagram unavailable</div>'
-            mw_badge_html = f'<span class="ap1-pill mw">MW: {imp_mw:.2f} g/mol</span>' if imp_mw else ''
 
             render_html(f"""
             <div class="ap1-imp-card">
@@ -1262,9 +1290,9 @@ with tab_predict:
                 <div class="ap1-imp-body">
                     <div class="ap1-imp-header">
                         <div>
-                            <div class="ap1-imp-title">{imp['iupacName']}</div>
-                            <div style="margin-top: 0.35rem; display: flex; gap: 0.5rem;">
-                                {mw_badge_html}
+                            <div class="ap1-imp-title">{imp.get('smiles') or imp.get('iupacName', 'Impurity')}</div>
+                            <div class="ap1-tag-group" style="margin-top: 0.4rem;">
+                                {imp_desc_pills}
                             </div>
                         </div>
                         <div style="text-align: right;">
@@ -1276,10 +1304,6 @@ with tab_predict:
                                 ΔG: {imp['deltaG']:.2f} kcal/mol
                             </div>
                         </div>
-                    </div>
-
-                    <div class="ap1-prob-bar-bg">
-                        <div class="ap1-prob-bar-fill" style="width: {min(max(prob_pct, 5), 100)}%;"></div>
                     </div>
 
                     <div class="ap1-mech-box">
@@ -1301,15 +1325,92 @@ with tab_predict:
             """)
 
         # ----------------------------------------------------------------------
+        # Comparative RDKit Descriptors Summary Table (Input vs. Output)
+        # ----------------------------------------------------------------------
+        st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">RDKit Molecular Descriptors Comparison</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-desc">Side-by-side cheminformatics descriptors computed via RDKit for both input starting materials and predicted degradation products.</div>', unsafe_allow_html=True)
+
+        desc_table_rows = []
+        # Input Primary
+        p_desc = get_molecular_descriptors(cur_primary)
+        desc_table_rows.append({
+            "Molecule Role": "Input: Primary Compound",
+            "SMILES / Identifier": cur_primary,
+            "MW (g/mol)": p_desc.get("mw", "-"),
+            "LogP": p_desc.get("logp", "-"),
+            "TPSA (Å²)": p_desc.get("tpsa", "-"),
+            "HBD": p_desc.get("hbd", "-"),
+            "HBA": p_desc.get("hba", "-"),
+            "NumRotBonds": p_desc.get("rotatable_bonds", "-"),
+            "HeavyAtoms": p_desc.get("heavy_atom_count", "-"),
+            "AromRings": p_desc.get("aromatic_rings", "-"),
+            "Heteroatoms": p_desc.get("heteroatoms", "-"),
+            "FractionCSP3": p_desc.get("fraction_csp3", "-")
+        })
+
+        # Input Secondaries
+        for s_i, s_sm in enumerate(cur_secondary):
+            sec_d = get_molecular_descriptors(s_sm)
+            desc_table_rows.append({
+                "Molecule Role": f"Input: Secondary #{s_i+1}",
+                "SMILES / Identifier": s_sm,
+                "MW (g/mol)": sec_d.get("mw", "-"),
+                "LogP": sec_d.get("logp", "-"),
+                "TPSA (Å²)": sec_d.get("tpsa", "-"),
+                "HBD": sec_d.get("hbd", "-"),
+                "HBA": sec_d.get("hba", "-"),
+                "NumRotBonds": sec_d.get("rotatable_bonds", "-"),
+                "HeavyAtoms": sec_d.get("heavy_atom_count", "-"),
+                "AromRings": sec_d.get("aromatic_rings", "-"),
+                "Heteroatoms": sec_d.get("heteroatoms", "-"),
+                "FractionCSP3": sec_d.get("fraction_csp3", "-")
+            })
+
+        # Output Degradants
+        for i_i, imp in enumerate(res["impurities"]):
+            i_sm = imp.get("smiles", "")
+            i_d = get_molecular_descriptors(i_sm)
+            desc_table_rows.append({
+                "Molecule Role": f"Output: Degradant #{i_i+1}",
+                "SMILES / Identifier": i_sm or imp.get("iupacName", f"Product #{i_i+1}"),
+                "MW (g/mol)": i_d.get("mw", "-"),
+                "LogP": i_d.get("logp", "-"),
+                "TPSA (Å²)": i_d.get("tpsa", "-"),
+                "HBD": i_d.get("hbd", "-"),
+                "HBA": i_d.get("hba", "-"),
+                "NumRotBonds": i_d.get("rotatable_bonds", "-"),
+                "HeavyAtoms": i_d.get("heavy_atom_count", "-"),
+                "AromRings": i_d.get("aromatic_rings", "-"),
+                "Heteroatoms": i_d.get("heteroatoms", "-"),
+                "FractionCSP3": i_d.get("fraction_csp3", "-")
+            })
+
+        df_desc_table = pd.DataFrame(desc_table_rows)
+        st.dataframe(df_desc_table, use_container_width=True)
+
+        # ----------------------------------------------------------------------
         # CSV Report Export (Integrated directly in Output Page)
         # ----------------------------------------------------------------------
         report_rows = []
         for idx, imp in enumerate(res["impurities"]):
             prob_pct = round(imp.get("probability", 0.0) * 100, 2)
+            i_smiles = imp.get("smiles", "")
+            i_d = get_molecular_descriptors(i_smiles)
             report_rows.append({
                 "Rank": idx + 1,
                 "Byproduct IUPAC Name": imp.get("iupacName", ""),
-                "SMILES": imp.get("smiles", ""),
+                "SMILES": i_smiles,
+                "MW (g/mol)": i_d.get("mw", ""),
+                "LogP": i_d.get("logp", ""),
+                "TPSA (Å²)": i_d.get("tpsa", ""),
+                "HBD": i_d.get("hbd", ""),
+                "HBA": i_d.get("hba", ""),
+                "NumRotatableBonds": i_d.get("rotatable_bonds", ""),
+                "HeavyAtomCount": i_d.get("heavy_atom_count", ""),
+                "NumAromaticRings": i_d.get("aromatic_rings", ""),
+                "NumHeteroatoms": i_d.get("heteroatoms", ""),
+                "FractionCSP3": i_d.get("fraction_csp3", ""),
                 "Degradation Condition": imp.get("condition", ""),
                 "Origin": imp.get("source", "Stress degradation"),
                 "Combined Formation Probability (%)": prob_pct,
