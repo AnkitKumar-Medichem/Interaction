@@ -398,33 +398,50 @@ def render_html(html_str: str):
 # ==============================================================================
 # Chemical Structure Rendering & Descriptors Engine
 # ==============================================================================
+def sanitize_smiles_py(raw: str) -> str:
+    """Sanitizes raw chemical SMILES input."""
+    if not raw:
+        return ""
+    s = raw.strip()
+    s = re.sub(r'^[`"\']+|[`"\']+$', '', s)
+    s = re.sub(r'^(?:canonical\s+)?smiles\s*:\s*', '', s, flags=re.I)
+    s = re.sub(r'\s*\(.*?\)$', '', s)
+    s = re.sub(r'[;,. \t]+$', '', s)
+    s = re.sub(r'\s+', '', s)
+    return s
+
 def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200) -> str:
     """
     Renders a crisp 2D chemical structure image.
     Uses native cheminformatics drawing if available, with resilient remote fallback.
     """
-    if not smiles or not smiles.strip():
+    clean = sanitize_smiles_py(smiles)
+    if not clean:
         return ""
-    clean = smiles.strip()
 
-    # 1. Try local cheminformatics engine (RDKit)
+    # 1. Try local cheminformatics engine (RDKit vector SVG)
     try:
         from rdkit import Chem
-        from rdkit.Chem import Draw
+        from rdkit.Chem.Draw import rdMolDraw2D
         mol = Chem.MolFromSmiles(clean)
+        if mol is None:
+            relaxed = re.sub(r'[@\\/]', '', clean)
+            relaxed = re.sub(r'\(\)', '', relaxed)
+            if relaxed and relaxed != clean:
+                mol = Chem.MolFromSmiles(relaxed)
         if mol is not None:
-            img = Draw.MolToImage(mol, size=(width, height))
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            b64 = base64.b64encode(buf.getvalue()).decode()
-            return f"data:image/png;base64,{b64}"
+            drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
+            drawer.DrawMolecule(mol)
+            drawer.FinishDrawing()
+            svg = drawer.GetDrawingText()
+            b64 = base64.b64encode(svg.encode("utf-8")).decode("utf-8")
+            return f"data:image/svg+xml;base64,{b64}"
     except Exception:
         pass
 
-    # 2. Resilient fallback to chemical repository depiction API (PubChem with Cactus fallback)
+    # 2. Resilient fallback to chemical repository depiction API (Cactus)
     try:
         encoded = urllib.parse.quote(clean)
-        # NCI Cactus is resilient when PubChem returns 503 Server Busy
         return f"https://cactus.nci.nih.gov/chemical/structure/{encoded}/image"
     except Exception:
         return ""
@@ -435,13 +452,18 @@ def get_molecular_descriptors(smiles: str) -> Dict[str, Any]:
     logP, TPSA, HBD, HBA, NumRotatableBonds, HeavyAtomCount,
     NumAromaticRings, NumHeteroatoms, FractionCSP3, and MolWt.
     """
-    if not smiles or not smiles.strip():
+    clean = sanitize_smiles_py(smiles)
+    if not clean:
         return {}
-    clean = smiles.strip()
     try:
         from rdkit import Chem
         from rdkit.Chem import Descriptors, rdMolDescriptors
         mol = Chem.MolFromSmiles(clean)
+        if mol is None:
+            relaxed = re.sub(r'[@\\/]', '', clean)
+            relaxed = re.sub(r'\(\)', '', relaxed)
+            if relaxed and relaxed != clean:
+                mol = Chem.MolFromSmiles(relaxed)
         if mol is not None:
             return {
                 "mw": round(float(Descriptors.MolWt(mol)), 2),
@@ -469,7 +491,7 @@ def format_descriptor_pills(desc: Dict[str, Any]) -> str:
     if "logp" in desc and desc["logp"] is not None:
         pills.append(f'<span class="ap1-pill" title="Partition Coefficient (LogP)">LogP: {desc["logp"]}</span>')
     if "tpsa" in desc and desc["tpsa"] is not None:
-        pills.append(f'<span class="ap1-pill" title="Topological Polar Surface Area (Å²)">TPSA: {desc["tpsa"]} Å²</span>')
+        pills.append(f'<span class="ap1-pill" title="Topological Polar Surface Area (sq A)">TPSA: {desc["tpsa"]} sq A</span>')
     if "hbd" in desc and desc["hbd"] is not None:
         pills.append(f'<span class="ap1-pill" title="Hydrogen Bond Donors">HBD: {desc["hbd"]}</span>')
     if "hba" in desc and desc["hba"] is not None:
@@ -809,9 +831,10 @@ def predict_degradation_and_reactions(
 
     # 3. Oxidative Stress Pathway
     if has_phenol:
+        quinone_smiles = "CC(=O)N=C1C=CC(=O)C=C1" if "CC(=O)Nc1ccc(O)cc1" in primary_smiles else "O=C1C=CC(=O)C=C1"
         candidates.append({
             "iupacName": "Para-Quinone / Dimeric Coupling Product",
-            "smiles": "O=C1C=CC(=O)C=C1" if "c1ccc(O)cc1" in primary_smiles else primary_smiles + "O",
+            "smiles": quinone_smiles,
             "condition": "Oxidation",
             "source": "Stress degradation",
             "mechanismExplanation": "Single-electron oxidation (SET) of phenolic hydroxyl generating phenoxyl radical followed by quinone formation.",
@@ -828,10 +851,22 @@ def predict_degradation_and_reactions(
             "deltaG": -2.8,
             "kineticLikelihood": 0.88
         })
+    elif has_amine:
+        n_ox = re.sub(r'N(?=[^a-z]|$)', '[N+]([O-])', primary_smiles)
+        candidates.append({
+            "iupacName": "N-Oxide Oxidation Derivative",
+            "smiles": n_ox if n_ox != primary_smiles else primary_smiles.replace("N", "NO"),
+            "condition": "Oxidation",
+            "source": "Stress degradation",
+            "mechanismExplanation": "Electrophilic oxygen atom transfer to basic amine nitrogen lone pair.",
+            "deltaG": -1.1,
+            "kineticLikelihood": 0.79
+        })
     else:
+        ox_smiles = primary_smiles.replace("c1ccccc1", "c1ccc(O)cc1") if "c1ccccc1" in primary_smiles else (primary_smiles.replace("C", "C(O)", 1) if "C" in primary_smiles else primary_smiles)
         candidates.append({
             "iupacName": "Hydroperoxide Auto-Oxidation Derivative",
-            "smiles": primary_smiles + "O",
+            "smiles": ox_smiles,
             "condition": "Oxidation",
             "source": "Stress degradation",
             "mechanismExplanation": "Free-radical hydrogen abstraction by triplet oxygen generating hydroperoxide intermediates.",
@@ -851,9 +886,10 @@ def predict_degradation_and_reactions(
     })
 
     # 5. Thermal Degradation Pathway
+    decarb_smiles = (re.sub(r'C\(=O\)O(?![C|c])', '', primary_smiles).replace("()", "").replace("( )", "") or ("c1ccccc1" if "c1ccccc1" in primary_smiles else primary_smiles))
     candidates.append({
         "iupacName": "Thermal Decarboxylation / Pyrolysis Product",
-        "smiles": primary_smiles.replace("C(=O)O", "") if has_acid else primary_smiles,
+        "smiles": decarb_smiles if has_acid else primary_smiles,
         "condition": "Thermal Degradation",
         "source": "Stress degradation",
         "mechanismExplanation": "Thermal energy overcoming activation barrier for concerted elimination or decarboxylation.",
@@ -932,7 +968,7 @@ def predict_degradation_and_reactions(
         clean = re.sub(r"\s*\(.*?\)", "", name_str)
         clean = re.sub(r"\s*&.*$", "", clean)
         clean = re.sub(r"^\[.*?\]\s*", "", clean)
-        clean = re.sub(r"\s*↔.*$", "", clean)
+        clean = re.sub(r"\s*(?:<->|\u2194).*$", "", clean)
         clean = re.sub(r"Reactive Center", "Aliphatic Center", clean, flags=re.I)
         return clean.strip()
 
@@ -1097,9 +1133,9 @@ with tab_predict:
             method_choice = st.radio(
                 "Select Prediction Framework",
                 [
-                    "Dual Engine (Heuristic Kinetic Rules + Boltzmann Thermodynamic ΔG)",
+                    "Dual Engine (Heuristic Kinetic Rules + Boltzmann Thermodynamic Delta G)",
                     "Heuristic (Expert Kinetic Activation & Transition States)",
-                    "Boltzmann (Thermodynamic Free Energy ΔG Distribution at 298.15K)"
+                    "Boltzmann (Thermodynamic Free Energy Delta G Distribution at 298.15K)"
                 ],
                 index=0,
                 label_visibility="collapsed"
@@ -1243,13 +1279,6 @@ with tab_predict:
             <div class="ap1-cot-box">{cot_text}</div>
             """)
 
-        render_html("""
-        <div class="ap1-cot-note">
-            <strong style="color: #0F172A; display: block; margin-bottom: 0.25rem; font-size: 0.85rem;">Chemical Reaction & Byproduct Analysis:</strong>
-            Products identified with high formation probability or favorable exergonic free energy (&Delta;G &lt; 0 kcal/mol) represent dominant reaction pathways. In experimental validation, these byproducts should be verified using analytical separation techniques (HPLC, LC-MS, GC-MS, or NMR).
-        </div>
-        """)
-
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
 
         # ----------------------------------------------------------------------
@@ -1278,8 +1307,9 @@ with tab_predict:
             imp_img = get_chemical_structure_img(imp_smiles, width=240, height=200)
             imp_desc = get_molecular_descriptors(imp_smiles)
             imp_desc_pills = format_descriptor_pills(imp_desc)
+            enc_smiles = urllib.parse.quote(sanitize_smiles_py(imp_smiles))
 
-            imp_mol_html = f'<img src="{imp_img}" alt="Structure of {imp.get("iupacName", "Impurity")}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if imp_img else '<div style="color: #94A3B8; font-size: 0.75rem; text-align: center;">Structure diagram unavailable</div>'
+            imp_mol_html = f'<img src="{imp_img}" alt="Structure of {imp.get("iupacName", "Impurity")}" onerror="if(!this.dataset.fallback){{this.dataset.fallback=\'1\';this.src=\'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{enc_smiles}/PNG?record_type=2d&image_size=300x300\';}}else{{this.style.display=\'none\';}}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if imp_img else '<div style="color: #94A3B8; font-size: 0.75rem; text-align: center;">Structure diagram unavailable</div>'
 
             render_html(f"""
             <div class="ap1-imp-card">
@@ -1301,7 +1331,7 @@ with tab_predict:
                                 Heuristic: {(imp['probabilityHeuristic']*100):.1f}% | Boltzmann: {(imp['probabilityBoltzmann']*100):.1f}%
                             </div>
                             <div style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #64748B; margin-top: 0.25rem;">
-                                ΔG: {imp['deltaG']:.2f} kcal/mol
+                                Delta G: {imp['deltaG']:.2f} kcal/mol
                             </div>
                         </div>
                     </div>
@@ -1316,78 +1346,10 @@ with tab_predict:
                         <span class="ap1-pill" style="font-weight: 600; color: #1D4ED8; background: #EFF6FF; border-color: #DBEAFE;">
                             Origin: {imp.get('source', 'Stress degradation')}
                         </span>
-                        <span class="ap1-pill" style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #64748B; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{imp_smiles}">
-                            {imp_smiles}
-                        </span>
                     </div>
                 </div>
             </div>
             """)
-
-        # ----------------------------------------------------------------------
-        # Comparative RDKit Descriptors Summary Table (Input vs. Output)
-        # ----------------------------------------------------------------------
-        st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
-        st.markdown('<div class="section-title">RDKit Molecular Descriptors Comparison</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-desc">Side-by-side cheminformatics descriptors computed via RDKit for both input starting materials and predicted degradation products.</div>', unsafe_allow_html=True)
-
-        desc_table_rows = []
-        # Input Primary
-        p_desc = get_molecular_descriptors(cur_primary)
-        desc_table_rows.append({
-            "Molecule Role": "Input: Primary Compound",
-            "SMILES / Identifier": cur_primary,
-            "MW (g/mol)": p_desc.get("mw", "-"),
-            "LogP": p_desc.get("logp", "-"),
-            "TPSA (Å²)": p_desc.get("tpsa", "-"),
-            "HBD": p_desc.get("hbd", "-"),
-            "HBA": p_desc.get("hba", "-"),
-            "NumRotBonds": p_desc.get("rotatable_bonds", "-"),
-            "HeavyAtoms": p_desc.get("heavy_atom_count", "-"),
-            "AromRings": p_desc.get("aromatic_rings", "-"),
-            "Heteroatoms": p_desc.get("heteroatoms", "-"),
-            "FractionCSP3": p_desc.get("fraction_csp3", "-")
-        })
-
-        # Input Secondaries
-        for s_i, s_sm in enumerate(cur_secondary):
-            sec_d = get_molecular_descriptors(s_sm)
-            desc_table_rows.append({
-                "Molecule Role": f"Input: Secondary #{s_i+1}",
-                "SMILES / Identifier": s_sm,
-                "MW (g/mol)": sec_d.get("mw", "-"),
-                "LogP": sec_d.get("logp", "-"),
-                "TPSA (Å²)": sec_d.get("tpsa", "-"),
-                "HBD": sec_d.get("hbd", "-"),
-                "HBA": sec_d.get("hba", "-"),
-                "NumRotBonds": sec_d.get("rotatable_bonds", "-"),
-                "HeavyAtoms": sec_d.get("heavy_atom_count", "-"),
-                "AromRings": sec_d.get("aromatic_rings", "-"),
-                "Heteroatoms": sec_d.get("heteroatoms", "-"),
-                "FractionCSP3": sec_d.get("fraction_csp3", "-")
-            })
-
-        # Output Degradants
-        for i_i, imp in enumerate(res["impurities"]):
-            i_sm = imp.get("smiles", "")
-            i_d = get_molecular_descriptors(i_sm)
-            desc_table_rows.append({
-                "Molecule Role": f"Output: Degradant #{i_i+1}",
-                "SMILES / Identifier": i_sm or imp.get("iupacName", f"Product #{i_i+1}"),
-                "MW (g/mol)": i_d.get("mw", "-"),
-                "LogP": i_d.get("logp", "-"),
-                "TPSA (Å²)": i_d.get("tpsa", "-"),
-                "HBD": i_d.get("hbd", "-"),
-                "HBA": i_d.get("hba", "-"),
-                "NumRotBonds": i_d.get("rotatable_bonds", "-"),
-                "HeavyAtoms": i_d.get("heavy_atom_count", "-"),
-                "AromRings": i_d.get("aromatic_rings", "-"),
-                "Heteroatoms": i_d.get("heteroatoms", "-"),
-                "FractionCSP3": i_d.get("fraction_csp3", "-")
-            })
-
-        df_desc_table = pd.DataFrame(desc_table_rows)
-        st.dataframe(df_desc_table, use_container_width=True)
 
         # ----------------------------------------------------------------------
         # CSV Report Export (Integrated directly in Output Page)
@@ -1403,7 +1365,7 @@ with tab_predict:
                 "SMILES": i_smiles,
                 "MW (g/mol)": i_d.get("mw", ""),
                 "LogP": i_d.get("logp", ""),
-                "TPSA (Å²)": i_d.get("tpsa", ""),
+                "TPSA (sq A)": i_d.get("tpsa", ""),
                 "HBD": i_d.get("hbd", ""),
                 "HBA": i_d.get("hba", ""),
                 "NumRotatableBonds": i_d.get("rotatable_bonds", ""),
@@ -1430,7 +1392,7 @@ with tab_predict:
         st.markdown('<div class="section-desc">Download complete structured analysis data including reaction pathways, thermodynamic free energy values, and kinetic formation probabilities.</div>', unsafe_allow_html=True)
 
         st.download_button(
-            label="📥 Download Degradation Analysis CSV Report",
+            label="Download Degradation Analysis CSV Report",
             data=report_csv_data,
             file_name=f"interaction_prediction_report_{datetime.date.today()}.csv",
             mime="text/csv",

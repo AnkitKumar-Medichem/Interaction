@@ -30,6 +30,17 @@ let initializationPromise: Promise<RDKitModule> | null = null;
 const svgCache = new Map<string, string>();
 const descriptorCache = new Map<string, MolecularDescriptors | null>();
 
+export function sanitizeSmiles(raw: string): string {
+  if (!raw) return "";
+  let s = raw.trim();
+  s = s.replace(/^[`"']+|[`"']+$/g, '');
+  s = s.replace(/^(?:canonical\s+)?smiles\s*:\s*/i, '');
+  s = s.replace(/\s+\(.*?\)$/, '');
+  s = s.replace(/[;,. \t]+$/, '');
+  s = s.replace(/\s+/g, '');
+  return s;
+}
+
 export async function initRDKit(): Promise<RDKitModule> {
   if (rdkitModule) return rdkitModule;
   if (initializationPromise) return initializationPromise;
@@ -59,9 +70,13 @@ export async function initRDKit(): Promise<RDKitModule> {
                 rdkitModule = module;
                 resolve(module);
               })
-              .catch(reject);
+              .catch((e: unknown) => {
+                initializationPromise = null;
+                reject(e);
+              });
           });
       } else {
+        initializationPromise = null;
         reject(new Error("initRDKitModule function not found on window"));
       }
     };
@@ -79,7 +94,10 @@ export async function initRDKit(): Promise<RDKitModule> {
         const fallbackScript = document.createElement("script");
         fallbackScript.src = "https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js";
         fallbackScript.onload = () => startInit();
-        fallbackScript.onerror = () => reject(new Error("Failed to load RDKit script"));
+        fallbackScript.onerror = () => {
+          initializationPromise = null;
+          reject(new Error("Failed to load RDKit script"));
+        };
         document.head.appendChild(fallbackScript);
       };
       document.head.appendChild(script);
@@ -91,11 +109,16 @@ export async function initRDKit(): Promise<RDKitModule> {
 
 export async function validateSmiles(smiles: string): Promise<{ isValid: boolean; canonicalSmiles?: string; error?: string }> {
   try {
-    const clean = smiles.trim();
+    const clean = sanitizeSmiles(smiles);
     if (!clean) return { isValid: false, error: "Empty chemical structure" };
 
     const rdkit = await initRDKit();
-    const mol = rdkit.get_mol(clean);
+    let mol = rdkit.get_mol(clean);
+    if (!mol || !mol.is_valid()) {
+      if (mol) mol.delete();
+      const relaxed = clean.replace(/[@\\/]/g, "").replace(/\(\)/g, "");
+      mol = rdkit.get_mol(relaxed);
+    }
     if (!mol) {
       return { isValid: false, error: "Invalid chemical structure (RDKit could not parse SMILES)" };
     }
@@ -116,7 +139,8 @@ export async function validateSmiles(smiles: string): Promise<{ isValid: boolean
 
 export async function getMoleculeSvg(smiles: string, width: number = 200, height: number = 200): Promise<string | null> {
   if (!smiles) return null;
-  const cleanInputSmiles = smiles.trim().replace(/\s+/g, '');
+  const cleanInputSmiles = sanitizeSmiles(smiles);
+  if (!cleanInputSmiles) return null;
   const cacheKey = `${cleanInputSmiles}_${width}x${height}`;
   
   if (svgCache.has(cacheKey)) {
@@ -125,7 +149,16 @@ export async function getMoleculeSvg(smiles: string, width: number = 200, height
 
   try {
     const rdkit = await initRDKit();
-    const mol = rdkit.get_mol(cleanInputSmiles);
+    let mol = rdkit.get_mol(cleanInputSmiles);
+    
+    // Fallback: try parsing with relaxed stereochemistry or empty branch pruning
+    if (!mol || !mol.is_valid()) {
+      if (mol) mol.delete();
+      const relaxed = cleanInputSmiles.replace(/[@\\/]/g, "").replace(/\(\)/g, "");
+      if (relaxed && relaxed !== cleanInputSmiles) {
+        mol = rdkit.get_mol(relaxed);
+      }
+    }
     
     if (!mol) return null;
     
@@ -136,13 +169,16 @@ export async function getMoleculeSvg(smiles: string, width: number = 200, height
     }
     
     // RDKit minimal get_svg takes width and height parameters directly
-    const svg = mol.get_svg(width, height);
+    const rawSvg = mol.get_svg(width, height);
     mol.delete();
     
-    if (svg) {
-      svgCache.set(cacheKey, svg);
+    if (rawSvg) {
+      // Strip XML declaration for valid inline SVG rendering in React
+      const cleanSvg = rawSvg.replace(/<\?xml[^>]*\?>/i, '').trim();
+      svgCache.set(cacheKey, cleanSvg);
+      return cleanSvg;
     }
-    return svg;
+    return null;
   } catch (err) {
     console.error("RDKit SVG Generation Error:", err);
     return null;

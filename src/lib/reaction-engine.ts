@@ -737,9 +737,12 @@ export function generateComputationalPrediction(
   // PATHWAY D: OXIDATIVE STRESS REACTIVITY
   // ---------------------------------------------------------
   if (hasPhenol) {
+    const quinoneSmiles = primarySmiles.includes("CC(=O)Nc1ccc(O)cc1") 
+      ? "CC(=O)N=C1C=CC(=O)C=C1" 
+      : (primarySmiles.includes("c1ccc(O)cc1") ? "O=C1C=CC(=O)C=C1" : "O=C1C=CC(=O)C=C1");
     candidates.push({
       iupacName: `${primaryName} Para-Quinone / Dimeric Coupling Product`,
-      smiles: primarySmiles.includes("c1ccc(O)cc1") ? "O=C1C=CC(=O)C=C1" : primarySmiles + "O",
+      smiles: quinoneSmiles,
       structureDescription: "Quinonoid oxidation product derived from phenolic ring oxidation.",
       condition: "Oxidation",
       source: "Stress degradation",
@@ -759,9 +762,10 @@ export function generateComputationalPrediction(
       kineticLikelihood: 0.88
     });
   } else if (hasAmine) {
+    const nOxideSmiles = primarySmiles.replace(/N(?=[^a-z]|$)/, "[N+]([O-])");
     candidates.push({
       iupacName: `${primaryName} N-Oxide Derivative`,
-      smiles: primarySmiles + "O",
+      smiles: nOxideSmiles !== primarySmiles ? nOxideSmiles : primarySmiles.replace(/N/g, "NO"),
       structureDescription: "Mono-oxygenated N-oxide oxidation degradant.",
       condition: "Oxidation",
       source: "Stress degradation",
@@ -781,9 +785,12 @@ export function generateComputationalPrediction(
       kineticLikelihood: 0.92
     });
   } else {
+    const hydroxylatedSmiles = primarySmiles.includes("c1ccccc1") 
+      ? primarySmiles.replace("c1ccccc1", "c1ccc(O)cc1") 
+      : primarySmiles.replace(/C/, "C(O)");
     candidates.push({
       iupacName: `${primaryName} Hydroperoxide / Benzylic Oxidation Derivative`,
-      smiles: primarySmiles + "O",
+      smiles: hydroxylatedSmiles,
       structureDescription: "Oxidative hydroxylation byproduct from atmospheric auto-oxidation.",
       condition: "Oxidation",
       source: "Stress degradation",
@@ -808,9 +815,10 @@ export function generateComputationalPrediction(
       kineticLikelihood: 0.65
     });
   } else if (hasKetone || hasAldehyde) {
+    const norrishFrag = primarySmiles.replace(/C\(=O\)/g, "").replace(/\(\)/g, "");
     candidates.push({
       iupacName: `${primaryName} Norrish Photochemical Cleavage Product`,
-      smiles: primarySmiles.replace(/C(=O)/, ""),
+      smiles: norrishFrag && norrishFrag.length > 3 ? norrishFrag : primarySmiles,
       structureDescription: "Photolytic fragmentation product via Norrish Type cleavage.",
       condition: "Photodegradation",
       source: "Stress degradation",
@@ -830,9 +838,10 @@ export function generateComputationalPrediction(
       kineticLikelihood: 0.61
     });
   } else {
+    const photoFrag = primarySmiles.replace(/C\(=O\)O/g, "").replace(/\(\)/g, "");
     candidates.push({
       iupacName: `${primaryName} Photolytic Cleavage Fragment`,
-      smiles: primarySmiles.replace(/C(=O)O/, ""),
+      smiles: photoFrag && photoFrag.length > 3 ? photoFrag : primarySmiles,
       structureDescription: "Photolytic scission product resulting from UV chromophore excitation.",
       condition: "Photodegradation",
       source: "Stress degradation",
@@ -857,9 +866,13 @@ export function generateComputationalPrediction(
       kineticLikelihood: 0.74
     });
   } else if (hasAcid) {
+    const decarboxSmiles = primarySmiles
+      .replace(/C\(=O\)O(?![C|c])/g, "")
+      .replace(/\(\)/g, "")
+      .replace(/\(\s*\)/g, "");
     candidates.push({
       iupacName: `Decarboxylated ${primaryName}`,
-      smiles: primarySmiles.replace(/C\(=O\)O(?![C|c])/g, ""),
+      smiles: decarboxSmiles && decarboxSmiles.length > 3 ? decarboxSmiles : (primarySmiles.includes("c1ccccc1") ? "c1ccccc1" : primarySmiles),
       structureDescription: "Thermally induced decarboxylation product.",
       condition: "Thermal Degradation",
       source: "Stress degradation",
@@ -918,9 +931,12 @@ export function generateComputationalPrediction(
         kineticLikelihood: 0.93
       });
     } else if ((hasThioether || hasAmine || hasPhenol) && crHasPeroxide) {
+      const perSmiles = hasThioether 
+        ? primarySmiles.replace(/CSC/g, "CS(=O)C")
+        : (hasPhenol ? "O=C1C=CC(=O)C=C1" : primarySmiles.replace(/N(?=[^a-z]|$)/, "[N+]([O-])"));
       candidates.push({
         iupacName: `${primaryName} Peroxide-Induced S/N-Oxide (${coReactantName} Interaction)`,
-        smiles: primarySmiles + "O",
+        smiles: perSmiles,
         structureDescription: `Accelerated oxidation product catalyzed by residual peroxides in ${coReactantName}.`,
         condition: "Oxidation",
         source: "Interaction with other compound",

@@ -726,17 +726,8 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4">
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-5 text-sm text-[#334155] leading-relaxed whitespace-pre-wrap font-sans">
-                  {result.chainOfThought || "No detailed reasoning chain provided."}
-                </div>
-
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 text-xs text-[#475569] leading-relaxed">
-                  <strong className="text-[#0F172A] block mb-1 text-sm font-semibold">
-                    Chemical Reaction & Byproduct Analysis:
-                  </strong>
-                  Products identified with high formation probability or favorable exergonic free energy (ΔG &lt; 0 kcal/mol) represent dominant reaction pathways. In experimental validation, these byproducts should be verified using analytical separation techniques (HPLC, LC-MS, GC-MS, or NMR).
-                </div>
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-5 text-sm text-[#334155] leading-relaxed whitespace-pre-wrap font-sans">
+                {result.chainOfThought || "No detailed reasoning chain provided."}
               </div>
             </section>
 
@@ -782,7 +773,7 @@ export default function App() {
                         <div className="ap1-imp-body">
                           <div className="ap1-imp-header">
                             <div>
-                              <div className="ap1-imp-title">{imp.iupacName || "Product"}</div>
+                              <div className="ap1-imp-title font-mono break-all">{imp.smiles || imp.iupacName || "Product"}</div>
                               <div className="mt-1.5 flex flex-wrap gap-1.5">
                                 {imp.molecularDescriptors?.MolWt && (
                                   <span className="ap1-pill mw">MW: {imp.molecularDescriptors.MolWt.toFixed(2)} g/mol</span>
@@ -853,11 +844,6 @@ export default function App() {
                             <span className="ap1-pill font-semibold text-[#1D4ED8] bg-[#EFF6FF] border-[#DBEAFE]">
                               Origin: {imp.origin || "Parent Molecule"}
                             </span>
-                            {imp.smiles && (
-                              <span className="ap1-pill font-mono text-[11px] text-[#64748B] truncate max-w-xs" title={imp.smiles}>
-                                {imp.smiles}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -867,94 +853,7 @@ export default function App() {
               )}
             </section>
 
-            {/* 5. RDKit Molecular Descriptors Comparison (Input vs. Output) */}
-            <section className="space-y-3">
-              <div>
-                <h3 className="section-title">RDKit Molecular Descriptors Comparison</h3>
-                <p className="section-desc">
-                  Cheminformatics descriptors computed via RDKit for both input starting materials and predicted degradation products.
-                </p>
-              </div>
-
-              <div className="border border-[#E2E8F0] rounded-xl bg-white overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#475569] font-semibold">
-                        <th className="py-3 px-3">Role</th>
-                        <th className="py-3 px-3">Molecule</th>
-                        <th className="py-3 px-2 text-right">MW</th>
-                        <th className="py-3 px-2 text-right">LogP</th>
-                        <th className="py-3 px-2 text-right">TPSA</th>
-                        <th className="py-3 px-2 text-right">HBD</th>
-                        <th className="py-3 px-2 text-right">HBA</th>
-                        <th className="py-3 px-2 text-right">RotB</th>
-                        <th className="py-3 px-2 text-right">HeavyAtoms</th>
-                        <th className="py-3 px-2 text-right">AromRings</th>
-                        <th className="py-3 px-2 text-right">Heteroatoms</th>
-                        <th className="py-3 px-2 text-right">Fsp3</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E2E8F0] text-[#1E293B]">
-                      {result.compounds.map((c, idx) => {
-                        const d = c.molecularDescriptors;
-                        return (
-                          <tr key={`comp-row-${idx}`} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-3 font-medium">
-                              <span className={idx === 0 ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] font-semibold" : "text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px] font-semibold"}>
-                                {idx === 0 ? "Input: Primary" : `Input: Sec #${idx}`}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 max-w-[200px]">
-                              <div className="font-semibold text-slate-800 truncate">{c.name}</div>
-                              <div className="font-mono text-[10px] text-slate-500 truncate" title={c.smiles}>{c.smiles}</div>
-                            </td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolWt != null ? d.MolWt.toFixed(2) : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolLogP != null ? d.MolLogP : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.TPSA != null ? d.TPSA : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBD != null ? d.HBD : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBA != null ? d.HBA : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumRotatableBonds != null ? d.NumRotatableBonds : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.HeavyAtomCount != null ? d.HeavyAtomCount : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumAromaticRings != null ? d.NumAromaticRings : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumHeteroatoms != null ? d.NumHeteroatoms : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.FractionCSP3 != null ? d.FractionCSP3 : "-"}</td>
-                          </tr>
-                        );
-                      })}
-                      {(result.degradationImpurities || []).slice(0, 5).map((imp, idx) => {
-                        const d = imp.molecularDescriptors;
-                        return (
-                          <tr key={`imp-row-${idx}`} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-3 font-medium">
-                              <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px] font-semibold">
-                                Output #{idx + 1}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 max-w-[200px]">
-                              <div className="font-semibold text-slate-800 truncate">{imp.iupacName}</div>
-                              <div className="font-mono text-[10px] text-slate-500 truncate" title={imp.smiles}>{imp.smiles}</div>
-                            </td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolWt != null ? d.MolWt.toFixed(2) : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.MolLogP != null ? d.MolLogP : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.TPSA != null ? d.TPSA : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBD != null ? d.HBD : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.HBA != null ? d.HBA : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumRotatableBonds != null ? d.NumRotatableBonds : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.HeavyAtomCount != null ? d.HeavyAtomCount : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumAromaticRings != null ? d.NumAromaticRings : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.NumHeteroatoms != null ? d.NumHeteroatoms : "-"}</td>
-                            <td className="py-2.5 px-2 text-right font-mono">{d?.FractionCSP3 != null ? d.FractionCSP3 : "-"}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-
-            {/* 5. Disclaimer Card */}
+            {/* Disclaimer Card */}
             <div className="border border-[#E2E8F0] rounded-xl bg-[#FAFAFA] p-4 text-xs text-[#64748B] leading-relaxed">
               <p className="italic m-0">
                 Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays (HPLC, LC-MS, NMR).
