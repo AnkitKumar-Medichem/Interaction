@@ -11,14 +11,44 @@ import io
 import base64
 import urllib.parse
 import datetime
-import pandas as pd
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
-import streamlit as st
+import csv
 from typing import List, Dict, Any, Tuple
+
+# Optional 3rd-party dependencies with resilient fallbacks
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+except Exception:
+    plt = None
+
+try:
+    import seaborn as sns
+except Exception:
+    sns = None
+
+try:
+    import streamlit as st
+except ImportError:
+    raise RuntimeError("Streamlit is required to run this application. Please run: pip install streamlit")
+
+def safe_rerun():
+    """Reruns the Streamlit application safely across different Streamlit versions."""
+    if hasattr(st, "rerun"):
+        st.rerun()
+    elif hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
+
 
 # ==============================================================================
 # Page Configuration & Styling
@@ -514,30 +544,61 @@ def format_descriptor_pills(desc: Dict[str, Any]) -> str:
 LOGBOOK_FILE = "query_logbook.csv"
 LOGBOOK_COLUMNS = ["timestamp", "primary_compound_smiles", "secondary_compounds_smiles", "predicted_impurities"]
 
-def load_logbook() -> pd.DataFrame:
+def load_logbook():
+    """Loads the query logbook into a DataFrame or list of dicts."""
     if os.path.exists(LOGBOOK_FILE):
         try:
-            df = pd.read_csv(LOGBOOK_FILE)
-            for col in LOGBOOK_COLUMNS:
-                if col not in df.columns:
-                    df[col] = ""
-            return df
+            if pd is not None:
+                df = pd.read_csv(LOGBOOK_FILE)
+                for col in LOGBOOK_COLUMNS:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+            else:
+                rows = []
+                with open(LOGBOOK_FILE, mode='r', encoding='utf-8', errors='ignore') as f:
+                    reader = csv.DictReader(f)
+                    for r in reader:
+                        rows.append(r)
+                return rows
         except Exception:
-            return pd.DataFrame(columns=LOGBOOK_COLUMNS)
-    return pd.DataFrame(columns=LOGBOOK_COLUMNS)
+            return pd.DataFrame(columns=LOGBOOK_COLUMNS) if pd is not None else []
+    return pd.DataFrame(columns=LOGBOOK_COLUMNS) if pd is not None else []
 
 def append_to_logbook(primary_smiles: str, secondary_smiles_list: List[str], impurities: List[Dict[str, Any]]):
-    df = load_logbook()
-    imp_summary = "; ".join([f"{i.get('iupacName', 'Unknown')} ({i.get('smiles', '')}) [{(i.get('probability', 0)*100):.1f}%]" for i in impurities[:5]])
-    new_entry = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "primary_compound_smiles": primary_smiles,
-        "secondary_compounds_smiles": "; ".join([s for s in secondary_smiles_list if s.strip()]),
-        "predicted_impurities": imp_summary
-    }
-    df = pd.concat([pd.DataFrame([new_entry]), df], ignore_index=True)
-    df = df.head(100)
-    df.to_csv(LOGBOOK_FILE, index=False)
+    """Appends a new prediction query entry into the persistent rolling CSV logbook."""
+    try:
+        imp_summary = "; ".join([f"{i.get('iupacName', 'Unknown')} ({i.get('smiles', '')}) [{(i.get('probability', 0)*100):.1f}%]" for i in impurities[:5]])
+        new_entry = {
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "primary_compound_smiles": primary_smiles,
+            "secondary_compounds_smiles": "; ".join([s for s in secondary_smiles_list if s.strip()]),
+            "predicted_impurities": imp_summary
+        }
+        if pd is not None:
+            df = load_logbook()
+            if isinstance(df, pd.DataFrame):
+                df = pd.concat([pd.DataFrame([new_entry]), df], ignore_index=True)
+                df = df.head(100)
+                df.to_csv(LOGBOOK_FILE, index=False)
+                return
+
+        # Pure-Python fallback using built-in csv
+        existing = []
+        if os.path.exists(LOGBOOK_FILE):
+            with open(LOGBOOK_FILE, mode='r', encoding='utf-8', errors='ignore') as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    existing.append(r)
+        all_entries = [new_entry] + existing
+        all_entries = all_entries[:100]
+        with open(LOGBOOK_FILE, mode='w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=LOGBOOK_COLUMNS)
+            writer.writeheader()
+            writer.writerows(all_entries)
+    except Exception:
+        pass
+
 
 # ==============================================================================
 # Functional Group Identification Engine
@@ -701,43 +762,93 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
 # ==============================================================================
 # Heatmap Plotter (Pure Publication-Quality Matrix)
 # ==============================================================================
-def plot_heatmap(matrix: np.ndarray, row_labels: List[str], col_labels: List[str], title: str) -> plt.Figure:
+def plot_heatmap(matrix, row_labels: List[str], col_labels: List[str], title: str):
     """
-    Generates a publication-quality vulnerability matrix.
-    Functional groups on x-axis (col_labels), stress conditions on y-axis (row_labels).
+    Generates a publication-quality vulnerability matrix using Matplotlib/Seaborn.
+    Returns None if graphics libraries are unavailable or if rendering fails.
     """
-    display_rows = [r if len(r) <= 35 else r[:32] + "..." for r in row_labels]
-    df = pd.DataFrame(matrix, index=display_rows, columns=col_labels)
+    if pd is None or sns is None or plt is None:
+        return None
 
-    n_rows = len(display_rows)
-    n_cols = len(col_labels)
-    fig_width = max(8.5, n_cols * 1.6 + 2.0)
-    fig_height = max(4.6, n_rows * 0.7 + 1.8)
+    try:
+        display_rows = [r if len(r) <= 35 else r[:32] + "..." for r in row_labels]
+        df = pd.DataFrame(matrix, index=display_rows, columns=col_labels)
 
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=150)
-    fig.patch.set_facecolor('#FFFFFF')
-    ax.set_facecolor('#F8FAFC')
+        n_rows = len(display_rows)
+        n_cols = len(col_labels)
+        fig_width = max(8.5, n_cols * 1.6 + 2.0)
+        fig_height = max(4.6, n_rows * 0.7 + 1.8)
 
-    # Percentage removed from heatmap cells (annot=False)
-    sns.heatmap(
-        df,
-        annot=False,
-        cmap="coolwarm",
-        vmin=0.0,
-        vmax=1.0,
-        cbar_kws={'label': 'Degradation / Incompatibility Potential', 'shrink': 0.85},
-        linewidths=2.0,
-        linecolor='#FFFFFF',
-        square=False,
-        ax=ax
-    )
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=150)
+        fig.patch.set_facecolor('#FFFFFF')
+        ax.set_facecolor('#F8FAFC')
 
-    ax.set_title(title, fontsize=13, fontweight='bold', pad=18, color='#0F172A')
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=15 if n_cols > 3 else 0, ha='center', fontsize=9.5, fontweight='600', color='#334155')
-    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=9.5, fontweight='600', color='#334155')
+        sns.heatmap(
+            df,
+            annot=False,
+            cmap="coolwarm",
+            vmin=0.0,
+            vmax=1.0,
+            cbar_kws={'label': 'Degradation / Incompatibility Potential', 'shrink': 0.85},
+            linewidths=2.0,
+            linecolor='#FFFFFF',
+            square=False,
+            ax=ax
+        )
 
-    plt.tight_layout()
-    return fig
+        ax.set_title(title, fontsize=13, fontweight='bold', pad=18, color='#0F172A')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=15 if n_cols > 3 else 0, ha='center', fontsize=9.5, fontweight='600', color='#334155')
+        ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=9.5, fontweight='600', color='#334155')
+
+        plt.tight_layout()
+        return fig
+    except Exception:
+        return None
+
+def render_html_heatmap(matrix, row_labels: List[str], col_labels: List[str], title: str):
+    """
+    Bulletproof pure-HTML heatmap fallback. Never fails, requires 0 external dependencies.
+    """
+    def get_color_style(val: float) -> Tuple[str, str, str]:
+        if val >= 0.85:
+            return "#FEE2E2", "#991B1B", "Critical"
+        elif val >= 0.65:
+            return "#FFEDD5", "#9A3412", "High"
+        elif val >= 0.35:
+            return "#FEF9C3", "#854D0E", "Moderate"
+        elif val >= 0.15:
+            return "#E0F2FE", "#075985", "Low"
+        return "#F8FAFC", "#475569", "Resistant"
+
+    header_cols = "".join([f'<th style="padding: 10px 14px; background: #F1F5F9; color: #1E293B; font-size: 0.85rem; font-weight: 700; border: 1px solid #CBD5E1; text-align: center;">{c}</th>' for c in col_labels])
+    
+    rows_html = []
+    for r_idx, r_name in enumerate(row_labels):
+        cells = []
+        for c_idx in range(len(col_labels)):
+            val = float(matrix[r_idx][c_idx])
+            bg, text_color, label = get_color_style(val)
+            cells.append(f'<td style="padding: 10px 14px; background: {bg}; color: {text_color}; font-size: 0.8rem; font-weight: 600; text-align: center; border: 1px solid #E2E8F0;">{label} ({int(val*100)}%)</td>')
+        rows_html.append(f'<tr><td style="padding: 10px 14px; background: #F8FAFC; color: #0F172A; font-weight: 700; font-size: 0.85rem; border: 1px solid #CBD5E1; white-space: nowrap;">{r_name}</td>{"".join(cells)}</tr>')
+
+    table_html = f"""
+    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.25rem; margin: 1rem 0; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        <div style="font-weight: 700; color: #0F172A; font-size: 1.05rem; margin-bottom: 0.75rem;">{title}</div>
+        <table style="width: 100%; border-collapse: collapse; font-family: 'Inter', -apple-system, sans-serif;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px 14px; background: #F1F5F9; color: #1E293B; font-size: 0.85rem; font-weight: 700; border: 1px solid #CBD5E1; text-align: left;">Stress Condition</th>
+                    {header_cols}
+                </tr>
+            </thead>
+            <tbody>
+                {"".join(rows_html)}
+            </tbody>
+        </table>
+    </div>
+    """
+    render_html(table_html)
+
 
 # ==============================================================================
 # Reaction & Degradation Prediction Engine
@@ -937,13 +1048,17 @@ def predict_degradation_and_reactions(
                     "kineticLikelihood": 0.72
                 })
 
-    # Boltzmann & Heuristic Probabilities Calculation
+    # Boltzmann & Heuristic Probabilities Calculation (Numerically Stabilized)
     R = 0.0019872  # kcal/(mol*K)
     T = 298.15     # Kelvin
     RT = R * T
 
-    exp_terms = [math.exp(-c["deltaG"] / RT) for c in candidates]
-    sum_exp = sum(exp_terms)
+    raw_exps = [-c["deltaG"] / RT for c in candidates]
+    max_exp = max(raw_exps) if raw_exps else 0.0
+    # Softmax log-shift prevents math.exp from throwing OverflowError
+    exp_terms = [math.exp(max(-500.0, min(500.0, e - max_exp))) for e in raw_exps]
+    sum_exp = sum(exp_terms) if sum(exp_terms) > 0 else 1.0
+
 
     for i, c in enumerate(candidates):
         p_boltzmann = round(min(0.99, max(0.01, exp_terms[i] / sum_exp)), 4)
@@ -1064,7 +1179,7 @@ def predict_degradation_and_reactions(
     return {
         "functional_groups": p_groups,
         "impurities": top_5,
-        "heatmap_matrix": np.array(matrix),
+        "heatmap_matrix": np.array(matrix) if np is not None else matrix,
         "row_labels": row_labels,
         "col_labels": col_labels,
         "chain_of_thought": chain_of_thought
@@ -1122,11 +1237,11 @@ with tab_predict:
             with col_add:
                 if st.button("Add Secondary Compound (SMILES)", disabled=st.session_state.num_secondary >= 4):
                     st.session_state.num_secondary += 1
-                    st.rerun()
+                    safe_rerun()
             with col_rem:
                 if st.button("Remove Secondary Compound", disabled=st.session_state.num_secondary <= 1):
                     st.session_state.num_secondary -= 1
-                    st.rerun()
+                    safe_rerun()
 
         with col_input2:
             st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;'>Prediction Engine & Methodology</div>", unsafe_allow_html=True)
@@ -1153,13 +1268,21 @@ with tab_predict:
             predict_btn = st.button("Predict Chemical Interactions", type="primary", use_container_width=True)
 
     # Perform Analysis on Click
-    if predict_btn and primary_smiles.strip():
-        with st.spinner("Analyzing functional groups and calculating condition reactivity..."):
-            calc_results = predict_degradation_and_reactions(primary_smiles, sec_smiles_list, method_key)
-            append_to_logbook(primary_smiles, sec_smiles_list, calc_results["impurities"])
-            st.session_state.last_results = calc_results
-            st.session_state.last_primary = primary_smiles
-            st.session_state.last_secondary = [s for s in sec_smiles_list if s.strip()]
+    if predict_btn:
+        clean_primary = sanitize_smiles_py(primary_smiles)
+        if not clean_primary:
+            st.error("Please provide a valid Primary Compound SMILES string before starting prediction.")
+        else:
+            with st.spinner("Analyzing functional groups and calculating condition reactivity..."):
+                try:
+                    calc_results = predict_degradation_and_reactions(primary_smiles, sec_smiles_list, method_key)
+                    append_to_logbook(primary_smiles, sec_smiles_list, calc_results["impurities"])
+                    st.session_state.last_results = calc_results
+                    st.session_state.last_primary = primary_smiles
+                    st.session_state.last_secondary = [s for s in sec_smiles_list if s.strip()]
+                except Exception as ex:
+                    st.error(f"Prediction calculation error: {ex}")
+
 
     # Display Results Dashboard matching AI Studio
     if "last_results" in st.session_state:
@@ -1257,13 +1380,35 @@ with tab_predict:
         st.markdown('<div class="section-title">Stress Degradation & Incompatibility Heatmap</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-desc">Quantitative stress matrix modeling reactive center vulnerability across Acidic, Basic, Hydrolysis, Photolysis, Thermal, and Oxidative conditions using the WarmCool spectrum.</div>', unsafe_allow_html=True)
 
-        fig = plot_heatmap(
-            res["heatmap_matrix"],
-            res["row_labels"],
-            res["col_labels"],
-            title=f"Stress Incompatibility Profile: {cur_primary}"
-        )
-        st.pyplot(fig)
+        fig = None
+        try:
+            fig = plot_heatmap(
+                res["heatmap_matrix"],
+                res["row_labels"],
+                res["col_labels"],
+                title=f"Stress Incompatibility Profile: {cur_primary}"
+            )
+        except Exception:
+            fig = None
+
+        if fig is not None:
+            try:
+                st.pyplot(fig)
+            except Exception:
+                render_html_heatmap(
+                    res["heatmap_matrix"],
+                    res["row_labels"],
+                    res["col_labels"],
+                    title=f"Stress Incompatibility Profile: {cur_primary}"
+                )
+        else:
+            render_html_heatmap(
+                res["heatmap_matrix"],
+                res["row_labels"],
+                res["col_labels"],
+                title=f"Stress Incompatibility Profile: {cur_primary}"
+            )
+
 
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
 
@@ -1384,8 +1529,17 @@ with tab_predict:
                 "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
 
-        df_report = pd.DataFrame(report_rows)
-        report_csv_data = df_report.to_csv(index=False).encode('utf-8')
+        if pd is not None:
+            df_report = pd.DataFrame(report_rows)
+            report_csv_data = df_report.to_csv(index=False).encode('utf-8')
+        else:
+            out = io.StringIO()
+            if report_rows:
+                writer = csv.DictWriter(out, fieldnames=list(report_rows[0].keys()))
+                writer.writeheader()
+                writer.writerows(report_rows)
+            report_csv_data = out.getvalue().encode('utf-8')
+            df_report = report_rows
 
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Computational CSV Report</div>', unsafe_allow_html=True)
@@ -1421,10 +1575,27 @@ with tab_logbook:
 
     df_log = load_logbook()
 
-    if df_log.empty:
+    is_empty = False
+    if pd is not None and isinstance(df_log, pd.DataFrame):
+        is_empty = df_log.empty
+    elif isinstance(df_log, list):
+        is_empty = len(df_log) == 0
+    else:
+        is_empty = True
+
+    if is_empty:
         st.info("No queries recorded yet. Run a prediction on the Analysis & Predictions tab to record data.")
     else:
-        csv_data = df_log.to_csv(index=False).encode('utf-8')
+        if pd is not None and isinstance(df_log, pd.DataFrame):
+            csv_data = df_log.to_csv(index=False).encode('utf-8')
+        else:
+            out = io.StringIO()
+            if df_log:
+                writer = csv.DictWriter(out, fieldnames=LOGBOOK_COLUMNS)
+                writer.writeheader()
+                writer.writerows(df_log)
+            csv_data = out.getvalue().encode('utf-8')
+
         st.download_button(
             label="Download Logbook CSV",
             data=csv_data,
@@ -1433,3 +1604,4 @@ with tab_logbook:
             type="primary"
         )
         st.dataframe(df_log, use_container_width=True, height=500)
+
