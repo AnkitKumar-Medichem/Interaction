@@ -657,18 +657,8 @@ export function generateComputationalPrediction(
       deltaG: -1.8,
       kineticLikelihood: 0.72
     });
-  } else {
-    candidates.push({
-      iupacName: `${primaryName} Acid-Solvolysis Byproduct`,
-      smiles: primarySmiles.replace(/C\(=O\)O/g, "C(=O)[O-]"),
-      structureDescription: "Protonated solvolysis derivative under acidic environmental stress.",
-      condition: "Acidic Hydrolysis",
-      source: "Stress degradation",
-      mechanismExplanation: "Hydronium-ion catalyzed cleavage of polar heteroatom linkages across the molecular scaffold.",
-      deltaG: -2.5,
-      kineticLikelihood: 0.78
-    });
   }
+  // If no acid-labile functional group is present, pathway is omitted (reactive functional group is absent)
 
   // ---------------------------------------------------------
   // PATHWAY B: BASIC STRESS REACTIVITY
@@ -706,32 +696,29 @@ export function generateComputationalPrediction(
       deltaG: -7.2,
       kineticLikelihood: 0.95
     });
-  } else {
-    candidates.push({
-      iupacName: `${primaryName} Base-Hydrolyzed Derivative`,
-      smiles: primarySmiles,
-      structureDescription: "Hydroxide-mediated nucleophilic cleavage product under alkaline pH.",
-      condition: "Basic Hydrolysis",
-      source: "Stress degradation",
-      mechanismExplanation: "Hydroxide-promoted deprotonation and nucleophilic substitution at base-labile molecular centers.",
-      deltaG: -3.4,
-      kineticLikelihood: 0.74
-    });
   }
+  // If no base-labile functional group is present, pathway is omitted (reactive functional group is absent)
 
   // ---------------------------------------------------------
   // PATHWAY C: HYDROLYSIS (NEUTRAL / HUMIDITY) REACTIVITY
   // ---------------------------------------------------------
-  candidates.push({
-    iupacName: `${primaryName} Neutral Aqueous Solvolysis Degradant`,
-    smiles: hasEster ? primarySmiles.replace(/CC\(=O\)O/g, "O") : primarySmiles,
-    structureDescription: "Neutral moisture-induced hydrolytic degradation product.",
-    condition: "Hydrolysis",
-    source: "Stress degradation",
-    mechanismExplanation: "Aqueous nucleophilic addition of ambient moisture molecules across labile polar functional groups accelerated under 75% RH stability conditions.",
-    deltaG: -1.6,
-    kineticLikelihood: 0.68
-  });
+  if (hasEster || hasBetaLactam) {
+    const hydroSmiles = hasEster
+      ? (primarySmiles.replace(/CC\(=O\)Oc/g, "Oc").replace(/C\(=O\)OC/g, "C(=O)O"))
+      : primarySmiles.replace(/C\(=O\)N/g, "C(=O)O");
+    if (hydroSmiles !== primarySmiles) {
+      candidates.push({
+        iupacName: `${primaryName} Neutral Aqueous Solvolysis Degradant`,
+        smiles: hydroSmiles,
+        structureDescription: "Neutral moisture-induced hydrolytic degradation product.",
+        condition: "Hydrolysis",
+        source: "Stress degradation",
+        mechanismExplanation: "Aqueous nucleophilic addition of ambient moisture molecules across labile polar functional groups accelerated under 75% RH stability conditions.",
+        deltaG: -1.6,
+        kineticLikelihood: 0.68
+      });
+    }
+  }
 
   // ---------------------------------------------------------
   // PATHWAY D: OXIDATIVE STRESS REACTIVITY
@@ -784,21 +771,8 @@ export function generateComputationalPrediction(
       deltaG: -8.4,
       kineticLikelihood: 0.92
     });
-  } else {
-    const hydroxylatedSmiles = primarySmiles.includes("c1ccccc1") 
-      ? primarySmiles.replace("c1ccccc1", "c1ccc(O)cc1") 
-      : primarySmiles.replace(/C/, "C(O)");
-    candidates.push({
-      iupacName: `${primaryName} Hydroperoxide / Benzylic Oxidation Derivative`,
-      smiles: hydroxylatedSmiles,
-      structureDescription: "Oxidative hydroxylation byproduct from atmospheric auto-oxidation.",
-      condition: "Oxidation",
-      source: "Stress degradation",
-      mechanismExplanation: "Free-radical hydrogen abstraction at activated benzylic/allylic C-H bonds by molecular triplet oxygen generating hydroperoxide intermediates.",
-      deltaG: 0.5,
-      kineticLikelihood: 0.62
-    });
   }
+  // If no oxidizable functional group is present, pathway is omitted (reactive functional group is absent)
 
   // ---------------------------------------------------------
   // PATHWAY E: PHOTOLYTIC STRESS REACTIVITY
@@ -816,16 +790,18 @@ export function generateComputationalPrediction(
     });
   } else if (hasKetone || hasAldehyde) {
     const norrishFrag = primarySmiles.replace(/C\(=O\)/g, "").replace(/\(\)/g, "");
-    candidates.push({
-      iupacName: `${primaryName} Norrish Photochemical Cleavage Product`,
-      smiles: norrishFrag && norrishFrag.length > 3 ? norrishFrag : primarySmiles,
-      structureDescription: "Photolytic fragmentation product via Norrish Type cleavage.",
-      condition: "Photodegradation",
-      source: "Stress degradation",
-      mechanismExplanation: "n->pi* UV excitation of the carbonyl chromophore initiating alpha-cleavage (Norrish Type I) and subsequent volatile decarbonylation.",
-      deltaG: 3.2,
-      kineticLikelihood: 0.58
-    });
+    if (norrishFrag && norrishFrag.length > 3 && norrishFrag !== primarySmiles) {
+      candidates.push({
+        iupacName: `${primaryName} Norrish Photochemical Cleavage Product`,
+        smiles: norrishFrag,
+        structureDescription: "Photolytic fragmentation product via Norrish Type cleavage.",
+        condition: "Photodegradation",
+        source: "Stress degradation",
+        mechanismExplanation: "n->pi* UV excitation of the carbonyl chromophore initiating alpha-cleavage (Norrish Type I) and subsequent volatile decarbonylation.",
+        deltaG: 3.2,
+        kineticLikelihood: 0.58
+      });
+    }
   } else if (hasSulfonamide) {
     candidates.push({
       iupacName: `${primaryName} Photo-Desulfonylation Aniline Adduct`,
@@ -837,19 +813,8 @@ export function generateComputationalPrediction(
       deltaG: 2.1,
       kineticLikelihood: 0.61
     });
-  } else {
-    const photoFrag = primarySmiles.replace(/C\(=O\)O/g, "").replace(/\(\)/g, "");
-    candidates.push({
-      iupacName: `${primaryName} Photolytic Cleavage Fragment`,
-      smiles: photoFrag && photoFrag.length > 3 ? photoFrag : primarySmiles,
-      structureDescription: "Photolytic scission product resulting from UV chromophore excitation.",
-      condition: "Photodegradation",
-      source: "Stress degradation",
-      mechanismExplanation: "Absorption of UV photons promotes valence electrons to antibonding pi* orbitals triggering homolytic bond scission.",
-      deltaG: 3.6,
-      kineticLikelihood: 0.46
-    });
   }
+  // If no photolabile functional group or active chromophore is present, pathway is omitted
 
   // ---------------------------------------------------------
   // PATHWAY F: THERMAL STRESS REACTIVITY
@@ -870,28 +835,21 @@ export function generateComputationalPrediction(
       .replace(/C\(=O\)O(?![C|c])/g, "")
       .replace(/\(\)/g, "")
       .replace(/\(\s*\)/g, "");
-    candidates.push({
-      iupacName: `Decarboxylated ${primaryName}`,
-      smiles: decarboxSmiles && decarboxSmiles.length > 3 ? decarboxSmiles : (primarySmiles.includes("c1ccccc1") ? "c1ccccc1" : primarySmiles),
-      structureDescription: "Thermally induced decarboxylation product.",
-      condition: "Thermal Degradation",
-      source: "Stress degradation",
-      mechanismExplanation: "Elevated thermal energy overcomes activation barrier (Ea > 26 kcal/mol) for concerted expulsion of carbon dioxide (CO2).",
-      deltaG: 1.4,
-      kineticLikelihood: 0.63
-    });
-  } else {
-    candidates.push({
-      iupacName: `${primaryName} Thermal Condensation Dimer`,
-      smiles: primarySmiles,
-      structureDescription: "Thermally driven condensation oligomer.",
-      condition: "Thermal Degradation",
-      source: "Stress degradation",
-      mechanismExplanation: "Elevated kinetic thermal collision rate facilitates intermolecular condensation between complementary polar functional groups.",
-      deltaG: 2.6,
-      kineticLikelihood: 0.52
-    });
+    const finalDecarb = decarboxSmiles && decarboxSmiles.length > 3 ? decarboxSmiles : (primarySmiles.includes("c1ccccc1") ? "c1ccccc1" : "");
+    if (finalDecarb && finalDecarb !== primarySmiles) {
+      candidates.push({
+        iupacName: `Decarboxylated ${primaryName}`,
+        smiles: finalDecarb,
+        structureDescription: "Thermally induced decarboxylation product.",
+        condition: "Thermal Degradation",
+        source: "Stress degradation",
+        mechanismExplanation: "Elevated thermal energy overcomes activation barrier (Ea > 26 kcal/mol) for concerted expulsion of carbon dioxide (CO2).",
+        deltaG: 1.4,
+        kineticLikelihood: 0.63
+      });
+    }
   }
+  // If no thermolabile functional group is present, pathway is omitted
 
   // ---------------------------------------------------------
   // PATHWAY G: SECONDARY COMPOUND FUNCTIONAL GROUP CROSS-REACTIONS
@@ -934,16 +892,18 @@ export function generateComputationalPrediction(
       const perSmiles = hasThioether 
         ? primarySmiles.replace(/CSC/g, "CS(=O)C")
         : (hasPhenol ? "O=C1C=CC(=O)C=C1" : primarySmiles.replace(/N(?=[^a-z]|$)/, "[N+]([O-])"));
-      candidates.push({
-        iupacName: `${primaryName} Peroxide-Induced S/N-Oxide (${coReactantName} Interaction)`,
-        smiles: perSmiles,
-        structureDescription: `Accelerated oxidation product catalyzed by residual peroxides in ${coReactantName}.`,
-        condition: "Oxidation",
-        source: "Interaction with other compound",
-        mechanismExplanation: `Trace organic hydroperoxides present in polymeric excipient ${coReactantName} directly transfer electrophilic oxygen to electron-rich heteroatoms in ${primaryName}.`,
-        deltaG: -3.2,
-        kineticLikelihood: 0.85
-      });
+      if (perSmiles !== primarySmiles) {
+        candidates.push({
+          iupacName: `${primaryName} Peroxide-Induced S/N-Oxide (${coReactantName} Interaction)`,
+          smiles: perSmiles,
+          structureDescription: `Accelerated oxidation product catalyzed by residual peroxides in ${coReactantName}.`,
+          condition: "Oxidation",
+          source: "Interaction with other compound",
+          mechanismExplanation: `Trace organic hydroperoxides present in polymeric excipient ${coReactantName} directly transfer electrophilic oxygen to electron-rich heteroatoms in ${primaryName}.`,
+          deltaG: -3.2,
+          kineticLikelihood: 0.85
+        });
+      }
     } else if (hasAcid && crHasAlkaline) {
       candidates.push({
         iupacName: `${primaryName} - ${coReactantName} Chelation Salt Complex`,
@@ -955,29 +915,47 @@ export function generateComputationalPrediction(
         deltaG: -5.1,
         kineticLikelihood: 0.91
       });
-    } else if (hasEster && crHasAlcohol) {
-      candidates.push({
-        iupacName: `${primaryName} - ${coReactantName} Transesterification Adduct`,
-        smiles: primarySmiles,
-        structureDescription: `Transesterified ester conjugate formed with excipient hydroxyls of ${coReactantName}.`,
-        condition: "Thermal Degradation",
-        source: "Interaction with other compound",
-        mechanismExplanation: `Intermolecular transesterification: nucleophilic attack of ${coReactantName} alcohol groups on the active ester center of ${primaryName} under elevated temperature.`,
-        deltaG: 0.4,
-        kineticLikelihood: 0.69
-      });
-    } else {
-      candidates.push({
-        iupacName: `${primaryName} - ${coReactantName} Intermolecular Adduct`,
-        smiles: primarySmiles,
-        structureDescription: `Intermolecular coupling adduct formed between ${primaryName} and ${coReactantName}.`,
-        condition: "Thermal Degradation",
-        source: "Interaction with other compound",
-        mechanismExplanation: `Direct cross-reaction between reactive functional groups of ${primaryName} and ${coReactantName} accelerated by thermal stress.`,
-        deltaG: 1.1,
-        kineticLikelihood: 0.64
-      });
     }
+  }
+
+  // 3b. SMILES Deduplication Filter Against the Parent
+  const isSameAsParent = (sCand: string, sParent: string): boolean => {
+    if (!sCand || !sParent) return false;
+    const c1 = sCand.trim();
+    const c2 = sParent.trim();
+    if (c1 === c2) return true;
+    return c1.replace(/[@\\/]/g, "") === c2.replace(/[@\\/]/g, "");
+  };
+
+  const interactionType: "Physical" | "Chemical" | "None" = hasCoReactant ? "Chemical" : "None";
+
+  // Filter out any candidate whose structure is identical to the primary compound
+  // Rule 3: If a valid degradant is generated under multiple conditions, we do NOT change or merge them!
+  const validCandidates = candidates.filter(cand => cand.smiles && !isSameAsParent(cand.smiles, primarySmiles));
+
+  if (validCandidates.length === 0) {
+    const absentCandidate = {
+      iupacName: "Reactive functional group is absent",
+      smiles: "",
+      structureDescription: "No reactive functional group present for degradation under evaluated conditions.",
+      origin: primaryName,
+      condition: "Hydrolysis" as const,
+      source: "Stress degradation" as const,
+      mechanismExplanation: "Reactive functional group is absent. The molecular structure lacks reactive functional centers (such as labile esters, amides, lactams, oxidizable heteroatoms, or thermolabile decarboxylation sites) vulnerable to this degradation pathway under standard stress conditions.",
+      relativeEnergy: 0,
+      probability: 0,
+      probabilityHeuristic: 0,
+      probabilityBoltzmann: 0
+    };
+
+    return {
+      chainOfThought: `[Systematic Functional Group Reactivity & Computational Degradation Assessment]\n\nPRIMARY MOLECULAR FUNCTIONAL GROUP INVENTORY:\n - Target Structure: ${primaryName} (SMILES: ${primarySmiles})\n - Identified Functional Groups: ${pFunctionalGroups.map(g => `${g.groupName} [${g.category}]`).join(", ") || "None detected"}\n - Identified Reactive Centers: ${pSites.join("; ") || "None"}\n\nEVALUATION OUTCOME:\n Reactive functional group is absent. The target molecular scaffold does not possess labile or reactive functional groups vulnerable to acidic, basic, hydrolytic, photolytic, thermal, or oxidative stress pathways under standard forced degradation conditions.`,
+      compounds: compoundsList,
+      interactionType,
+      mechanism: "Reactive functional group is absent. No forced degradation or chemical transformation observed.",
+      functionalGroupAnalysis: pFunctionalGroups,
+      degradationImpurities: [absentCandidate]
+    };
   }
 
   // 4. Thermodynamic Boltzmann Calculation (T = 298.15 K)
@@ -986,10 +964,10 @@ export function generateComputationalPrediction(
   const T = 298.15; // Kelvin
   const RT = R * T;
 
-  const expTerms = candidates.map(c => Math.exp(-c.deltaG / RT));
+  const expTerms = validCandidates.map(c => Math.exp(-c.deltaG / RT));
   const sumExp = expTerms.reduce((acc, v) => acc + v, 0);
 
-  const calculatedImpurities = candidates.map((cand, idx) => {
+  const calculatedImpurities = validCandidates.map((cand, idx) => {
     const pBoltzmann = Math.min(0.99, Math.max(0.01, Number((expTerms[idx] / sumExp).toFixed(4))));
     const pHeuristic = Math.min(0.99, Math.max(0.01, Number(cand.kineticLikelihood.toFixed(4))));
 
@@ -1019,8 +997,6 @@ export function generateComputationalPrediction(
   calculatedImpurities.sort((a, b) => b.probability - a.probability);
 
   const topImpurities = calculatedImpurities.slice(0, 5);
-
-  const interactionType: "Physical" | "Chemical" | "None" = hasCoReactant ? "Chemical" : "None";
 
   // Construct comprehensive mechanistic chain of thought detailing functional group calculations
   const chainOfThought = `[Systematic Functional Group Reactivity & Computational Degradation Assessment]

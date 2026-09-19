@@ -901,22 +901,25 @@ def predict_degradation_and_reactions(
             "deltaG": -4.1,
             "kineticLikelihood": 0.91
         })
-    else:
-        candidates.append({
-            "iupacName": "Acid Solvolysis Derivative",
-            "smiles": primary_smiles,
-            "condition": "Acidic Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Hydronium-catalyzed solvolysis of polar heteroatom linkages.",
-            "deltaG": -2.5,
-            "kineticLikelihood": 0.78
-        })
+    elif has_amide:
+        deamide = primary_smiles.replace("NC(=O)C", "N").replace("C(=O)N", "C(=O)O")
+        if deamide != primary_smiles:
+            candidates.append({
+                "iupacName": "Amide Cleavage Hydrolysis Derivative",
+                "smiles": deamide,
+                "condition": "Acidic Hydrolysis",
+                "source": "Stress degradation",
+                "mechanismExplanation": "Specific acid-catalyzed amide solvolysis releasing amine and carboxylic acid.",
+                "deltaG": -2.3,
+                "kineticLikelihood": 0.84
+            })
+    # If no acid-labile group is present, pathway is omitted (reactive functional group is absent)
 
     # 2. Basic Hydrolysis Pathway
     if has_ester:
         candidates.append({
             "iupacName": "Saponified Carboxylate / Phenolate Derivative",
-            "smiles": primary_smiles.replace("CC(=O)Oc", "Oc"),
+            "smiles": primary_smiles.replace("CC(=O)Oc", "Oc").replace("C(=O)OC", "C(=O)[O-]"),
             "condition": "Basic Hydrolysis",
             "source": "Stress degradation",
             "mechanismExplanation": "Bimolecular saponification (B_Ac2) via direct nucleophilic hydroxide attack releasing carboxylate.",
@@ -933,18 +936,33 @@ def predict_degradation_and_reactions(
             "deltaG": -7.2,
             "kineticLikelihood": 0.95
         })
-    else:
+    elif has_lactam:
         candidates.append({
-            "iupacName": "Base Hydrolysis Degradant",
-            "smiles": primary_smiles,
+            "iupacName": "Alkaline Ring-Opened Hydroxy-Carboxylate",
+            "smiles": primary_smiles.replace("C(=O)N", "C(=O)[O-]"),
             "condition": "Basic Hydrolysis",
             "source": "Stress degradation",
-            "mechanismExplanation": "Hydroxide-promoted nucleophilic cleavage at basic labile centers.",
-            "deltaG": -3.4,
-            "kineticLikelihood": 0.74
+            "mechanismExplanation": "Hydroxide nucleophile attacks strained lactam carbonyl causing irreversible ring scission.",
+            "deltaG": -6.5,
+            "kineticLikelihood": 0.92
         })
+    # If no base-labile group is present, pathway is omitted (reactive functional group is absent)
 
-    # 3. Oxidative Stress Pathway
+    # 3. Hydrolysis Pathway (Moisture / Ambient Aqueous)
+    if has_ester or has_lactam:
+        hydro_smiles = primary_smiles.replace("CC(=O)Oc", "Oc").replace("C(=O)OC", "C(=O)O")
+        if hydro_smiles != primary_smiles:
+            candidates.append({
+                "iupacName": "Neutral Moisture-Induced Hydrolysis Degradant",
+                "smiles": hydro_smiles,
+                "condition": "Hydrolysis",
+                "source": "Stress degradation",
+                "mechanismExplanation": "Neutral aqueous solvolytic ester cleavage under 75% RH stability humidity stress.",
+                "deltaG": -1.8,
+                "kineticLikelihood": 0.70
+            })
+
+    # 4. Oxidative Stress Pathway
     if has_phenol:
         quinone_smiles = "CC(=O)N=C1C=CC(=O)C=C1" if "CC(=O)Nc1ccc(O)cc1" in primary_smiles else "O=C1C=CC(=O)C=C1"
         candidates.append({
@@ -977,42 +995,37 @@ def predict_degradation_and_reactions(
             "deltaG": -1.1,
             "kineticLikelihood": 0.79
         })
-    else:
-        ox_smiles = primary_smiles.replace("c1ccccc1", "c1ccc(O)cc1") if "c1ccccc1" in primary_smiles else (primary_smiles.replace("C", "C(O)", 1) if "C" in primary_smiles else primary_smiles)
+    # If no oxidizable group is present, pathway is omitted (reactive functional group is absent)
+
+    # 5. Photolytic Degradation Pathway
+    if has_ester and ("c1" in primary_smiles or "c2" in primary_smiles or "c" in primary_smiles):
         candidates.append({
-            "iupacName": "Hydroperoxide Auto-Oxidation Derivative",
-            "smiles": ox_smiles,
-            "condition": "Oxidation",
+            "iupacName": "Photo-Fries / Photolytic Scission Fragment",
+            "smiles": "CC(=O)c1ccc(cc1)O",
+            "condition": "Photodegradation",
             "source": "Stress degradation",
-            "mechanismExplanation": "Free-radical hydrogen abstraction by triplet oxygen generating hydroperoxide intermediates.",
-            "deltaG": 0.5,
-            "kineticLikelihood": 0.62
+            "mechanismExplanation": "UV chromophore excitation initiating homolytic bond cleavage and radical rearrangement.",
+            "deltaG": 2.8,
+            "kineticLikelihood": 0.65
         })
+    # If no photolabile group is present, pathway is omitted (reactive functional group is absent)
 
-    # 4. Photolytic Degradation Pathway
-    candidates.append({
-        "iupacName": "Photo-Fries / Photolytic Scission Fragment",
-        "smiles": "CC(=O)c1ccc(cc1)O" if (has_ester and "c1" in primary_smiles) else primary_smiles,
-        "condition": "Photodegradation",
-        "source": "Stress degradation",
-        "mechanismExplanation": "UV chromophore excitation initiating homolytic bond cleavage and radical rearrangement.",
-        "deltaG": 2.8,
-        "kineticLikelihood": 0.65
-    })
+    # 6. Thermal Degradation Pathway
+    if has_acid:
+        decarb_smiles = (re.sub(r'C\(=O\)O(?![C|c])', '', primary_smiles).replace("()", "").replace("( )", "") or ("c1ccccc1" if "c1ccccc1" in primary_smiles else ""))
+        if decarb_smiles and decarb_smiles != primary_smiles:
+            candidates.append({
+                "iupacName": "Thermal Decarboxylation / Pyrolysis Product",
+                "smiles": decarb_smiles,
+                "condition": "Thermal Degradation",
+                "source": "Stress degradation",
+                "mechanismExplanation": "Thermal energy overcoming activation barrier for concerted elimination or decarboxylation.",
+                "deltaG": 1.4,
+                "kineticLikelihood": 0.63
+            })
+    # If no thermolabile group is present, pathway is omitted (reactive functional group is absent)
 
-    # 5. Thermal Degradation Pathway
-    decarb_smiles = (re.sub(r'C\(=O\)O(?![C|c])', '', primary_smiles).replace("()", "").replace("( )", "") or ("c1ccccc1" if "c1ccccc1" in primary_smiles else primary_smiles))
-    candidates.append({
-        "iupacName": "Thermal Decarboxylation / Pyrolysis Product",
-        "smiles": decarb_smiles if has_acid else primary_smiles,
-        "condition": "Thermal Degradation",
-        "source": "Stress degradation",
-        "mechanismExplanation": "Thermal energy overcoming activation barrier for concerted elimination or decarboxylation.",
-        "deltaG": 1.4,
-        "kineticLikelihood": 0.63
-    })
-
-    # 6. Secondary Compound Cross-Reactivity
+    # 7. Secondary Compound Cross-Reactivity
     if has_co_reactants:
         for idx, sec_smiles in enumerate(secondary_smiles_list):
             if not sec_smiles.strip():
@@ -1041,30 +1054,60 @@ def predict_degradation_and_reactions(
                     "deltaG": -3.5,
                     "kineticLikelihood": 0.89
                 })
-            else:
-                candidates.append({
-                    "iupacName": f"Intermolecular Coupling Complex (Co-reactant {idx+1})",
-                    "smiles": primary_smiles,
-                    "condition": "Basic Hydrolysis",
-                    "source": "Interaction with other compound",
-                    "mechanismExplanation": f"Intermolecular interaction between functional groups of primary compound and co-reactant {idx+1}.",
-                    "deltaG": -1.5,
-                    "kineticLikelihood": 0.72
-                })
+
+    # SMILES Deduplication Filter Against the Parent
+    def is_same_smiles(s1: str, s2: str) -> bool:
+        if not s1 or not s2:
+            return False
+        c1 = s1.strip()
+        c2 = s2.strip()
+        if c1 == c2:
+            return True
+        try:
+            from rdkit import Chem
+            m1 = Chem.MolFromSmiles(c1)
+            m2 = Chem.MolFromSmiles(c2)
+            if m1 and m2:
+                return Chem.MolToSmiles(m1) == Chem.MolToSmiles(m2)
+        except Exception:
+            pass
+        return c1.replace("@", "").replace("/", "").replace("\\", "") == c2.replace("@", "").replace("/", "").replace("\\", "")
+
+    # Exclude candidates whose structure is identical to primary compound
+    # Rule 3: If a valid degradant forms in multiple conditions, all instances are preserved
+    filtered_candidates = [c for c in candidates if c.get("smiles") and not is_same_smiles(c.get("smiles", ""), primary_smiles)]
+
+    if not filtered_candidates:
+        filtered_candidates = [{
+            "iupacName": "Reactive functional group is absent",
+            "smiles": "",
+            "condition": "Hydrolysis",
+            "source": "Stress degradation",
+            "mechanismExplanation": "Reactive functional group is absent. The molecular structure does not contain susceptible reaction centers (e.g., hydrolyzable esters/amides, oxidizable heteroatoms, or thermolabile groups) for this pathway.",
+            "deltaG": 0.0,
+            "kineticLikelihood": 0.0,
+            "probability": 0.0,
+            "probabilityBoltzmann": 0.0,
+            "probabilityHeuristic": 0.0
+        }]
 
     # Boltzmann & Heuristic Probabilities Calculation (Numerically Stabilized)
     R = 0.0019872  # kcal/(mol*K)
     T = 298.15     # Kelvin
     RT = R * T
 
-    raw_exps = [-c["deltaG"] / RT for c in candidates]
+    raw_exps = [-c["deltaG"] / RT for c in filtered_candidates]
     max_exp = max(raw_exps) if raw_exps else 0.0
-    # Softmax log-shift prevents math.exp from throwing OverflowError
     exp_terms = [math.exp(max(-500.0, min(500.0, e - max_exp))) for e in raw_exps]
     sum_exp = sum(exp_terms) if sum(exp_terms) > 0 else 1.0
 
+    for i, c in enumerate(filtered_candidates):
+        if c.get("iupacName") == "Reactive functional group is absent":
+            c["probability"] = 0.0
+            c["probabilityBoltzmann"] = 0.0
+            c["probabilityHeuristic"] = 0.0
+            continue
 
-    for i, c in enumerate(candidates):
         p_boltzmann = round(min(0.99, max(0.01, exp_terms[i] / sum_exp)), 4)
         p_heuristic = round(min(0.99, max(0.01, c["kineticLikelihood"])), 4)
 
@@ -1079,8 +1122,8 @@ def predict_degradation_and_reactions(
         c["probabilityBoltzmann"] = p_boltzmann
         c["probabilityHeuristic"] = p_heuristic
 
-    candidates.sort(key=lambda x: x["probability"], reverse=True)
-    top_5 = candidates[:5]
+    filtered_candidates.sort(key=lambda x: x["probability"], reverse=True)
+    top_5 = filtered_candidates[:5]
 
     # Build Heatmap matrix with functional groups on X-axis (col_labels) and conditions on Y-axis (row_labels)
     def clean_fg_name(name_str: str) -> str:
@@ -1453,12 +1496,15 @@ with tab_predict:
                 cond_class = "cond-hydro"
 
             imp_smiles = imp.get("smiles", "")
-            imp_img = get_chemical_structure_img(imp_smiles, width=240, height=200)
-            imp_desc = get_molecular_descriptors(imp_smiles)
-            imp_desc_pills = format_descriptor_pills(imp_desc)
-            enc_smiles = urllib.parse.quote(sanitize_smiles_py(imp_smiles))
+            imp_desc = get_molecular_descriptors(imp_smiles) if imp_smiles else {}
+            imp_desc_pills = format_descriptor_pills(imp_desc) if imp_desc else ""
+            enc_smiles = urllib.parse.quote(sanitize_smiles_py(imp_smiles)) if imp_smiles else ""
 
-            imp_mol_html = f'<img src="{imp_img}" alt="Structure of {imp.get("iupacName", "Impurity")}" onerror="if(!this.dataset.fallback){{this.dataset.fallback=\'1\';this.src=\'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{enc_smiles}/PNG?record_type=2d&image_size=300x300\';}}else{{this.style.display=\'none\';}}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if imp_img else '<div style="color: #94A3B8; font-size: 0.75rem; text-align: center;">Structure diagram unavailable</div>'
+            if not imp_smiles:
+                imp_mol_html = '<div style="color: #64748B; font-size: 0.8rem; text-align: center; padding: 2.5rem 0.5rem; font-weight: 500; font-family: \'Inter\', sans-serif;">Reactive functional group is absent</div>'
+            else:
+                imp_img = get_chemical_structure_img(imp_smiles, width=240, height=200)
+                imp_mol_html = f'<img src="{imp_img}" alt="Structure of {imp.get("iupacName", "Impurity")}" onerror="if(!this.dataset.fallback){{this.dataset.fallback=\'1\';this.src=\'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{enc_smiles}/PNG?record_type=2d&image_size=300x300\';}}else{{this.style.display=\'none\';}}" style="max-width: 100%; max-height: 180px; object-fit: contain;"/>' if imp_img else '<div style="color: #94A3B8; font-size: 0.75rem; text-align: center;">Structure diagram unavailable</div>'
 
             render_html(f"""
             <div class="ap1-imp-card">

@@ -767,7 +767,9 @@ export default function App() {
                           {imp.smiles ? (
                             <ChemicalStructure smiles={imp.smiles} width={220} height={220} />
                           ) : (
-                            <div className="w-40 h-40 bg-slate-100 rounded-lg animate-pulse" />
+                            <div className="w-48 h-48 flex items-center justify-center p-4 text-center text-xs font-medium text-[#64748B] bg-[#F8FAFC] border border-dashed border-[#CBD5E1] rounded-lg">
+                              Reactive functional group is absent
+                            </div>
                           )}
                         </div>
                         <div className="ap1-imp-body">

@@ -323,7 +323,13 @@ For each product, you MUST specify:
 - ${probabilityInstruction}
 
 IMPORTANT: Probabilities MUST be realistic estimates between 0.01 and 0.99.
-Rank the products by their calculated probability descending. Do not return more than 5 products.`,
+Rank the products by their calculated probability descending. Do not return more than 5 products.
+
+STRICT FUNCTIONAL GROUP REACTIVITY & DEDUPLICATION MANDATE:
+1. If Compound 1 does not contain the exact reactive functional group required for that specific reaction rule (e.g. predicting an aliphatic amine N-oxide when the molecule has no amine nitrogen, or predicting ester hydrolysis when no ester is present), do NOT predict that reaction.
+2. NEVER output the parent Compound 1 itself as a degradation product or impurity. If a reaction does not transform the structure, it is invalid.
+3. If Compound 1 does not contain reactive functional groups across all evaluated conditions, return exactly one entry with iupacName: 'Reactive functional group is absent' and smiles: ''.
+4. If Compound 1 can generate the same degradant in multiple conditions (e.g., acid and base hydrolysis both producing the same fragment), preserve both conditions intact.`,
                 responseMimeType: "application/json",
                 responseSchema: {
                   type: Type.OBJECT,
@@ -377,7 +383,43 @@ Rank the products by their calculated probability descending. Do not return more
             if (fullText) {
               const parsed = JSON.parse(fullText);
               if (parsed && Array.isArray(parsed.degradationImpurities)) {
-                parsed.degradationImpurities = parsed.degradationImpurities.slice(0, 5);
+                const primarySmiles = inputs[0]?.type === "SMILES" 
+                  ? inputs[0].value 
+                  : (lookupCompoundSmiles(inputs[0]?.value || "") || inputs[0]?.value || "");
+                
+                const isSameSmiles = (cand: string, parent: string) => {
+                  if (!cand || !parent) return false;
+                  const c1 = cand.trim();
+                  const c2 = parent.trim();
+                  if (c1 === c2) return true;
+                  return c1.replace(/[@\\/]/g, "") === c2.replace(/[@\\/]/g, "");
+                };
+
+                const filtered = parsed.degradationImpurities.filter((imp: any) => {
+                  if (!imp.smiles) {
+                    return imp.iupacName === "Reactive functional group is absent";
+                  }
+                  return !isSameSmiles(imp.smiles, primarySmiles);
+                });
+
+                if (filtered.length === 0) {
+                  parsed.degradationImpurities = [{
+                    iupacName: "Reactive functional group is absent",
+                    smiles: "",
+                    structureDescription: "No reactive functional group present for degradation under evaluated conditions.",
+                    origin: inputs[0]?.originalName || inputs[0]?.value || "Primary Compound",
+                    condition: "Hydrolysis",
+                    source: "Stress degradation",
+                    mechanismExplanation: "Reactive functional group is absent. The molecular structure lacks reactive functional centers vulnerable to forced degradation under standard stress conditions.",
+                    relativeEnergy: 0,
+                    probability: 0,
+                    probabilityHeuristic: 0,
+                    probabilityBoltzmann: 0
+                  }];
+                } else {
+                  // Preserve valid degradants, including identical degradants across different conditions
+                  parsed.degradationImpurities = filtered.slice(0, 5);
+                }
               }
               sendSse("complete", parsed);
               success = true;
