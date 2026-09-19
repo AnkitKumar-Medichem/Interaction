@@ -1,3 +1,6 @@
+/**
+ * INTERACTION: Popover UI Primitive
+ */
 "use client"
 
 import * as React from "react"
