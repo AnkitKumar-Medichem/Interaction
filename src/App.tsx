@@ -858,7 +858,7 @@ export default function App() {
             {/* Disclaimer Card */}
             <div className="border border-[#E2E8F0] rounded-xl bg-[#FAFAFA] p-4 text-xs text-[#64748B] leading-relaxed">
               <p className="italic m-0">
-                Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays (HPLC, LC-MS, NMR).
+                Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays.
               </p>
             </div>
           </div>

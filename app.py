@@ -1612,7 +1612,7 @@ with tab_predict:
         # ----------------------------------------------------------------------
         render_html("""
         <div class="ap1-disclaimer-box" style="margin-top: 1.5rem;">
-            Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays (HPLC, LC-MS, NMR).
+            Disclaimer: INTERACTION is an AI-assisted computational chemistry modeling tool designed for reaction pathway exploration and byproduct screening. Predictions should be verified by experimental analytical assays.
         </div>
         """)
 
