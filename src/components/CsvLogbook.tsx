@@ -69,9 +69,9 @@ export const CsvLogbook: React.FC<CsvLogbookProps> = ({ onNewReactionClick, onSe
     const blob = new Blob([textToDownload], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const dateOnly = new Date().toISOString().split('T')[0];
     link.setAttribute('href', url);
-    link.setAttribute('download', `interaction_logbook_100_${timestamp}.csv`);
+    link.setAttribute('download', `interaction_logbook_100_${dateOnly}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -123,7 +123,7 @@ export const CsvLogbook: React.FC<CsvLogbookProps> = ({ onNewReactionClick, onSe
               </span>
             </div>
             <p className="text-sm text-[#64748B]">
-              Persistently maintained on the database. Contains the most recent 100 SMILES interaction queries with columns: primary compound, secondary compounds, predicted impurities, and timestamp.
+              Persistently maintained on the database. Contains the most recent 100 SMILES interaction queries with columns: primary compound, secondary compounds, predicted impurities, and date.
             </p>
           </div>
 
@@ -264,7 +264,7 @@ export const CsvLogbook: React.FC<CsvLogbookProps> = ({ onNewReactionClick, onSe
                     <th className="py-3 px-4 min-w-[200px]">Primary Compound (SMILES)</th>
                     <th className="py-3 px-4 min-w-[180px]">Secondary Compounds</th>
                     <th className="py-3 px-4 min-w-[280px]">Predicted Impurities</th>
-                    <th className="py-3 px-4 min-w-[160px]">Timestamp</th>
+                    <th className="py-3 px-4 min-w-[130px]">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
@@ -295,15 +295,20 @@ export const CsvLogbook: React.FC<CsvLogbookProps> = ({ onNewReactionClick, onSe
                       <td className="py-3 px-4 text-[#64748B] whitespace-nowrap">
                         <div className="flex items-center gap-1.5 font-mono text-[11px]">
                           <Calendar className="w-3.5 h-3.5 text-[#94A3B8]" />
-                          {entry.timestamp ? new Date(entry.timestamp).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false
-                          }) : 'N/A'}
+                          {(() => {
+                            if (!entry.timestamp) return 'N/A';
+                            const clean = entry.timestamp.split('T')[0].split(' ')[0];
+                            const parts = clean.split('-');
+                            if (parts.length === 3) {
+                              const [y, m, d] = parts;
+                              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                              const monthIdx = parseInt(m, 10) - 1;
+                              if (monthIdx >= 0 && monthIdx < 12) {
+                                return `${months[monthIdx]} ${parseInt(d, 10)}, ${y}`;
+                              }
+                            }
+                            return clean;
+                          })()}
                         </div>
                       </td>
                     </tr>

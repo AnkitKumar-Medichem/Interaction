@@ -545,7 +545,7 @@ LOGBOOK_FILE = "query_logbook.csv"
 LOGBOOK_COLUMNS = ["timestamp", "primary_compound_smiles", "secondary_compounds_smiles", "predicted_impurities"]
 
 def load_logbook():
-    """Loads the query logbook into a DataFrame or list of dicts."""
+    """Loads the query logbook into a DataFrame or list of dicts with date-only timestamps."""
     if os.path.exists(LOGBOOK_FILE):
         try:
             if pd is not None:
@@ -553,12 +553,16 @@ def load_logbook():
                 for col in LOGBOOK_COLUMNS:
                     if col not in df.columns:
                         df[col] = ""
+                if "timestamp" in df.columns:
+                    df["timestamp"] = df["timestamp"].astype(str).apply(lambda x: x.split(" ")[0].split("T")[0] if x and str(x).lower() != 'nan' else "")
                 return df
             else:
                 rows = []
                 with open(LOGBOOK_FILE, mode='r', encoding='utf-8', errors='ignore') as f:
                     reader = csv.DictReader(f)
                     for r in reader:
+                        if "timestamp" in r and r["timestamp"]:
+                            r["timestamp"] = str(r["timestamp"]).split(" ")[0].split("T")[0]
                         rows.append(r)
                 return rows
         except Exception:
@@ -566,11 +570,11 @@ def load_logbook():
     return pd.DataFrame(columns=LOGBOOK_COLUMNS) if pd is not None else []
 
 def append_to_logbook(primary_smiles: str, secondary_smiles_list: List[str], impurities: List[Dict[str, Any]]):
-    """Appends a new prediction query entry into the persistent rolling CSV logbook."""
+    """Appends a new prediction query entry into the persistent rolling CSV logbook with date-only timestamp."""
     try:
         imp_summary = "; ".join([f"{i.get('iupacName', 'Unknown')} ({i.get('smiles', '')}) [{(i.get('probability', 0)*100):.1f}%]" for i in impurities[:5]])
         new_entry = {
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": datetime.date.today().strftime("%Y-%m-%d"),
             "primary_compound_smiles": primary_smiles,
             "secondary_compounds_smiles": "; ".join([s for s in secondary_smiles_list if s.strip()]),
             "predicted_impurities": imp_summary
@@ -1526,7 +1530,7 @@ with tab_predict:
                 "Free Energy Delta G (kcal/mol)": imp.get("deltaG", 0.0),
                 "Chemical Mechanism": imp.get("mechanismExplanation", ""),
                 "Primary Compound": cur_primary,
-                "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "Timestamp": datetime.date.today().strftime("%Y-%m-%d")
             })
 
         if pd is not None:
@@ -1571,7 +1575,7 @@ with tab_predict:
 # ==============================================================================
 with tab_logbook:
     st.markdown('<div class="section-title">Persistent Reaction Query Logbook</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-desc">Maintaining the 100 most recent calculation queries with SMILES inputs, predicted impurities, and timestamps.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-desc">Maintaining the 100 most recent calculation queries with SMILES inputs, predicted impurities, and dates.</div>', unsafe_allow_html=True)
 
     df_log = load_logbook()
 

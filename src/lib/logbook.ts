@@ -32,8 +32,19 @@ export function escapeCsvCell(value: string | undefined | null): string {
 }
 
 /**
+ * Extracts date portion (YYYY-MM-DD) from a timestamp string.
+ */
+export function formatDateOnly(value?: string): string {
+  if (!value) return '';
+  const str = String(value).trim();
+  if (str.includes('T')) return str.split('T')[0];
+  if (str.includes(' ')) return str.split(' ')[0];
+  return str;
+}
+
+/**
  * Builds standard CSV content from an array of logbook entries.
- * Columns: primary compound, secondary compounds, predicted impurities, timestamp
+ * Columns: primary compound, secondary compounds, predicted impurities, timestamp (date only)
  */
 export function buildCsvString(entries: LogbookEntry[]): string {
   const header = ['"primary_compound"', '"secondary_compounds"', '"predicted_impurities"', '"timestamp"'].join(',');
@@ -41,7 +52,7 @@ export function buildCsvString(entries: LogbookEntry[]): string {
     escapeCsvCell(e.primaryCompound),
     escapeCsvCell(e.secondaryCompounds || 'None'),
     escapeCsvCell(e.predictedImpurities || 'None'),
-    escapeCsvCell(e.timestamp)
+    escapeCsvCell(formatDateOnly(e.timestamp))
   ].join(','));
 
   return [header, ...rows].join('\n');
@@ -57,7 +68,7 @@ export async function logQueryToDatabase(
   impurities: Array<{ name?: string; iupacName?: string; smiles?: string; probability?: number }>
 ): Promise<void> {
   try {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toISOString().split('T')[0];
     const createdAt = Date.now();
     const secondaryStr = secondarySmilesList.filter(s => s && s.trim()).join('; ') || 'None';
 
