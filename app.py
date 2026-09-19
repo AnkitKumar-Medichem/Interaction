@@ -12,6 +12,7 @@ import base64
 import urllib.parse
 import datetime
 import csv
+import html
 from typing import List, Dict, Any, Tuple
 
 # Optional 3rd-party dependencies with resilient fallbacks
@@ -428,12 +429,12 @@ def render_html(html_str: str):
 # ==============================================================================
 # Chemical Structure Rendering & Descriptors Engine
 # ==============================================================================
-def sanitize_smiles_py(raw: str) -> str:
-    """Sanitizes raw chemical SMILES input."""
-    if not raw:
+def sanitize_smiles_py(raw: Any) -> str:
+    """Sanitizes raw chemical SMILES input with strict type safety."""
+    if not raw or not isinstance(raw, str):
         return ""
     s = raw.strip()
-    s = re.sub(r'^[`"\']+|[`"\']+$', '', s)
+    s = re.sub(r'^[`"\'\s]+|[`"\'\s]+$', '', s)
     s = re.sub(r'^(?:canonical\s+)?smiles\s*:\s*', '', s, flags=re.I)
     s = re.sub(r'\s*\(.*?\)$', '', s)
     s = re.sub(r'[;,. \t]+$', '', s)
@@ -443,7 +444,7 @@ def sanitize_smiles_py(raw: str) -> str:
 def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200) -> str:
     """
     Renders a crisp 2D chemical structure image.
-    Uses native cheminformatics drawing if available, with resilient remote fallback.
+    Uses native cheminformatics drawing if available, with resilient remote fallbacks (PubChem then Cactus).
     """
     clean = sanitize_smiles_py(smiles)
     if not clean:
@@ -452,6 +453,7 @@ def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200)
     # 1. Try local cheminformatics engine (RDKit vector SVG)
     try:
         from rdkit import Chem
+        from rdkit.Chem import rdDepictor
         from rdkit.Chem.Draw import rdMolDraw2D
         mol = Chem.MolFromSmiles(clean)
         if mol is None:
@@ -460,7 +462,14 @@ def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200)
             if relaxed and relaxed != clean:
                 mol = Chem.MolFromSmiles(relaxed)
         if mol is not None:
+            try:
+                rdDepictor.Compute2DCoords(mol)
+            except Exception:
+                pass
             drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
+            opts = drawer.drawOptions()
+            opts.clearBackground = True
+            opts.padding = 0.05
             drawer.DrawMolecule(mol)
             drawer.FinishDrawing()
             svg = drawer.GetDrawingText()
@@ -469,7 +478,14 @@ def get_chemical_structure_img(smiles: str, width: int = 240, height: int = 200)
     except Exception:
         pass
 
-    # 2. Resilient fallback to chemical repository depiction API (Cactus)
+    # 2. Resilient fallback to PubChem depiction API
+    try:
+        encoded = urllib.parse.quote(clean)
+        return f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{encoded}/PNG?record_type=2d&image_size={width}x{height}"
+    except Exception:
+        pass
+
+    # 3. Secondary fallback to Cactus NCI depiction
     try:
         encoded = urllib.parse.quote(clean)
         return f"https://cactus.nci.nih.gov/chemical/structure/{encoded}/image"
@@ -481,6 +497,7 @@ def get_molecular_descriptors(smiles: str) -> Dict[str, Any]:
     Calculates molecular descriptors using RDKit:
     logP, TPSA, HBD, HBA, NumRotatableBonds, HeavyAtomCount,
     NumAromaticRings, NumHeteroatoms, FractionCSP3, and MolWt.
+    Includes lightweight formula approximation fallback if RDKit is unavailable.
     """
     clean = sanitize_smiles_py(smiles)
     if not clean:
@@ -506,6 +523,30 @@ def get_molecular_descriptors(smiles: str) -> Dict[str, Any]:
                 "aromatic_rings": int(Descriptors.NumAromaticRings(mol)),
                 "heteroatoms": int(Descriptors.NumHeteroatoms(mol)),
                 "fraction_csp3": round(float(Descriptors.FractionCSP3(mol)), 3)
+            }
+    except Exception:
+        pass
+
+    # Lightweight heuristic fallback if RDKit is not installed
+    try:
+        heavy_atoms = len(re.findall(r'[A-Za-z]', re.sub(r'\[H\]|[Hh]', '', clean)))
+        aromatic_count = 1 if ('c1' in clean or 'c2' in clean) else 0
+        rot_bonds = max(0, len(re.findall(r'CC|CO|CN|CS', clean)) - 1)
+        hba = len(re.findall(r'[O|N|o|n]', clean))
+        hbd = len(re.findall(r'O(?![C|c])|N(?![C|c])|OH|NH', clean))
+        approx_mw = round(heavy_atoms * 13.5, 2)
+        if heavy_atoms > 0:
+            return {
+                "mw": approx_mw,
+                "logp": 1.5,
+                "tpsa": round(hba * 18.0, 1),
+                "hbd": hbd,
+                "hba": hba,
+                "rotatable_bonds": rot_bonds,
+                "heavy_atom_count": heavy_atoms,
+                "aromatic_rings": aromatic_count,
+                "heteroatoms": hba,
+                "fraction_csp3": 0.35
             }
     except Exception:
         pass
@@ -613,12 +654,36 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
     """
     Identifies functional groups and maps mechanistic reactivity across:
     Acidic, Basic, Hydrolysis, Photolytic, Thermal, Oxidative conditions.
+    Combines cheminformatics SMARTS matching with robust regex pattern fallbacks.
     """
-    s = smiles
+    s = sanitize_smiles_py(smiles)
+    if not s:
+        return []
     groups = []
 
+    mol = None
+    try:
+        from rdkit import Chem
+        mol = Chem.MolFromSmiles(s)
+        if mol is None:
+            relaxed = re.sub(r'[@\\/]', '', s)
+            if relaxed != s:
+                mol = Chem.MolFromSmiles(relaxed)
+    except Exception:
+        mol = None
+
+    def has_smarts(pattern: str) -> bool:
+        if mol is None:
+            return False
+        try:
+            from rdkit import Chem
+            query = Chem.MolFromSmarts(pattern)
+            return query is not None and mol.HasSubstructMatch(query)
+        except Exception:
+            return False
+
     # Beta-Lactam
-    if re.search(r"N[1-9]C\(=O\).*S[1-9]|N1C\(=O\)C[C|S]1", s, re.I):
+    if has_smarts("N1C(=O)C[C,S]1") or re.search(r"N[1-9]C\(=O\).*S[1-9]|N1C\(=O\)C[C|S]1", s, re.I):
         groups.append({
             "name": "Beta-Lactam Core",
             "category": "Strained Heterocycle",
@@ -634,7 +699,7 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
         })
 
     # Carboxylic Ester
-    if re.search(r"C\(=O\)O[C|c]|O-?C\(=O\)[C|c]|CC\(=O\)Oc|C\(=O\)OC", s, re.I):
+    if has_smarts("[#6][CX3](=O)[OX2H0][#6]") or re.search(r"C\(=O\)O[C|c]|O-?C\(=O\)[C|c]|CC\(=O\)Oc|C\(=O\)OC", s, re.I):
         groups.append({
             "name": "Carboxylic Ester",
             "category": "Carbonyl",
@@ -650,7 +715,7 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
         })
 
     # Carboxylic Acid
-    if re.search(r"C\(=O\)O(?![C|c])|C\(=O\)\[O-\]|C\(=O\)\[OH\]", s, re.I):
+    if has_smarts("[CX3](=O)[OX2H1]") or has_smarts("[CX3](=O)[O-]") or re.search(r"C\(=O\)O(?![C|c])|C\(=O\)\[O-\]|C\(=O\)\[OH\]", s, re.I):
         groups.append({
             "name": "Carboxylic Acid",
             "category": "Carboxylic Acid",
@@ -666,7 +731,7 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
         })
 
     # Phenolic Hydroxyl
-    if re.search(r"c[1-6]?c\([O|o]\)|c[1-6]?c\(O\)c|c1ccc\(O\)cc1|c1cc\(O\)ccc1", s, re.I):
+    if has_smarts("c[OX2H]") or re.search(r"c[1-6]?c\([O|o]\)|c[1-6]?c\(O\)c|c1ccc\(O\)cc1|c1cc\(O\)ccc1", s, re.I):
         groups.append({
             "name": "Phenol (Ar-OH)",
             "category": "Hydroxyl",
@@ -682,7 +747,7 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
         })
 
     # Amide Bond
-    if re.search(r"C\(=O\)N|NC\(=O\)", s, re.I):
+    if has_smarts("[CX3](=O)[NX3;H2,H1,H0;!$(NC=O)]") or re.search(r"C\(=O\)N|NC\(=O\)", s, re.I):
         groups.append({
             "name": "Amide Bond",
             "category": "Carbonyl / Nitrogen",
@@ -698,7 +763,7 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
         })
 
     # Aliphatic Amine
-    if re.search(r"[N;H2,H1]|NCC|CCN|NC\(C\)|C\(C\)N|CN\(C\)", s, re.I) and not re.search(r"NC\(=O\)|C\(=O\)N|NS\(=O\)", s, re.I):
+    if has_smarts("[NX3;H2,H1;!$(NC=O);!$(NS=O);!$(n)]") or (re.search(r"[N;H2,H1]|NCC|CCN|NC\(C\)|C\(C\)N|CN\(C\)", s, re.I) and not re.search(r"NC\(=O\)|C\(=O\)N|NS\(=O\)", s, re.I)):
         groups.append({
             "name": "Aliphatic Amine",
             "category": "Amine",
@@ -714,7 +779,7 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
         })
 
     # Thioether / Sulfide
-    if re.search(r"CSC|cSc|SCC", s, re.I):
+    if has_smarts("[#6][SX2][#6]") or re.search(r"CSC|cSc|SCC", s, re.I):
         groups.append({
             "name": "Thioether (Sulfide)",
             "category": "Sulfur",
@@ -774,6 +839,7 @@ def plot_heatmap(matrix, row_labels: List[str], col_labels: List[str], title: st
     if pd is None or sns is None or plt is None:
         return None
 
+    fig = None
     try:
         display_rows = [r if len(r) <= 35 else r[:32] + "..." for r in row_labels]
         df = pd.DataFrame(matrix, index=display_rows, columns=col_labels)
@@ -807,6 +873,11 @@ def plot_heatmap(matrix, row_labels: List[str], col_labels: List[str], title: st
         plt.tight_layout()
         return fig
     except Exception:
+        if fig is not None:
+            try:
+                plt.close(fig)
+            except Exception:
+                pass
         return None
 
 def render_html_heatmap(matrix, row_labels: List[str], col_labels: List[str], title: str):
@@ -830,7 +901,7 @@ def render_html_heatmap(matrix, row_labels: List[str], col_labels: List[str], ti
     for r_idx, r_name in enumerate(row_labels):
         cells = []
         for c_idx in range(len(col_labels)):
-            val = float(matrix[r_idx][c_idx])
+            val = float(matrix[r_idx][c_idx]) if (r_idx < len(matrix) and c_idx < len(matrix[r_idx])) else 0.15
             bg, text_color, label = get_color_style(val)
             cells.append(f'<td style="padding: 10px 14px; background: {bg}; color: {text_color}; font-size: 0.8rem; font-weight: 600; text-align: center; border: 1px solid #E2E8F0;">{label} ({int(val*100)}%)</td>')
         rows_html.append(f'<tr><td style="padding: 10px 14px; background: #F8FAFC; color: #0F172A; font-weight: 700; font-size: 0.85rem; border: 1px solid #CBD5E1; white-space: nowrap;">{r_name}</td>{"".join(cells)}</tr>')
@@ -838,7 +909,7 @@ def render_html_heatmap(matrix, row_labels: List[str], col_labels: List[str], ti
     table_html = f"""
     <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.25rem; margin: 1rem 0; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
         <div style="font-weight: 700; color: #0F172A; font-size: 1.05rem; margin-bottom: 0.75rem;">{title}</div>
-        <table style="width: 100%; border-collapse: collapse; font-family: 'Inter', -apple-system, sans-serif;">
+        <table style="width: 100%; border-collapse: collapse; font-family: \'Inter\', -apple-system, sans-serif;">
             <thead>
                 <tr>
                     <th style="padding: 10px 14px; background: #F1F5F9; color: #1E293B; font-size: 0.85rem; font-weight: 700; border: 1px solid #CBD5E1; text-align: left;">Stress Condition</th>
@@ -866,8 +937,32 @@ def predict_degradation_and_reactions(
     Calculates degradation products, free energies (Delta G), Boltzmann & Heuristic probabilities
     based on the identified functional groups.
     """
-    p_groups = identify_functional_groups(primary_smiles)
-    has_co_reactants = any(s.strip() for s in secondary_smiles_list)
+    clean_primary = sanitize_smiles_py(primary_smiles)
+    clean_secondaries = [sanitize_smiles_py(s) for s in secondary_smiles_list if s and sanitize_smiles_py(s)]
+
+    if not clean_primary:
+        return {
+            "functional_groups": [],
+            "impurities": [{
+                "iupacName": "Reactive functional group is absent",
+                "smiles": "",
+                "condition": "Hydrolysis",
+                "source": "Stress degradation",
+                "mechanismExplanation": "Reactive functional group is absent. Please enter a valid molecular SMILES string.",
+                "deltaG": 0.0,
+                "kineticLikelihood": 0.0,
+                "probability": 0.0,
+                "probabilityBoltzmann": 0.0,
+                "probabilityHeuristic": 0.0
+            }],
+            "heatmap_matrix": [[0.15]*1 for _ in range(6)],
+            "row_labels": ["Acidic", "Basic", "Hydrolysis", "Photolysis", "Thermal", "Oxidative"],
+            "col_labels": ["Aliphatic Framework"],
+            "chain_of_thought": "No primary compound provided."
+        }
+
+    p_groups = identify_functional_groups(clean_primary)
+    has_co_reactants = len(clean_secondaries) > 0
 
     candidates = []
 
@@ -1059,23 +1154,27 @@ def predict_degradation_and_reactions(
     def is_same_smiles(s1: str, s2: str) -> bool:
         if not s1 or not s2:
             return False
-        c1 = s1.strip()
-        c2 = s2.strip()
+        c1 = str(s1).strip()
+        c2 = str(s2).strip()
+        if not c1 or not c2:
+            return False
         if c1 == c2:
             return True
         try:
             from rdkit import Chem
             m1 = Chem.MolFromSmiles(c1)
             m2 = Chem.MolFromSmiles(c2)
-            if m1 and m2:
-                return Chem.MolToSmiles(m1) == Chem.MolToSmiles(m2)
+            if m1 is not None and m2 is not None:
+                return Chem.MolToSmiles(m1, isomericSmiles=False) == Chem.MolToSmiles(m2, isomericSmiles=False)
         except Exception:
             pass
-        return c1.replace("@", "").replace("/", "").replace("\\", "") == c2.replace("@", "").replace("/", "").replace("\\", "")
+        norm1 = re.sub(r'[@\\/]', '', c1).replace("()", "")
+        norm2 = re.sub(r'[@\\/]', '', c2).replace("()", "")
+        return norm1 == norm2
 
     # Exclude candidates whose structure is identical to primary compound
     # Rule 3: If a valid degradant forms in multiple conditions, all instances are preserved
-    filtered_candidates = [c for c in candidates if c.get("smiles") and not is_same_smiles(c.get("smiles", ""), primary_smiles)]
+    filtered_candidates = [c for c in candidates if c.get("smiles") and not is_same_smiles(c.get("smiles", ""), clean_primary)]
 
     if not filtered_candidates:
         filtered_candidates = [{
@@ -1369,6 +1468,7 @@ with tab_predict:
             </div>
             """
 
+        safe_primary = html.escape(cur_primary)
         render_html(f"""
         <div class="ap1-comp-card">
             <div class="ap1-comp-mol">
@@ -1380,8 +1480,8 @@ with tab_predict:
                     <span class="ap1-comp-name">Primary Compound</span>
                     <span class="ap1-comp-role role-primary">Primary Active</span>
                 </div>
-                <div class="ap1-smiles-box" title="{cur_primary}">
-                    {cur_primary}
+                <div class="ap1-smiles-box" title="{safe_primary}">
+                    {safe_primary}
                 </div>
                 <div class="ap1-tag-group">
                     {primary_desc_pills}
@@ -1393,6 +1493,7 @@ with tab_predict:
 
         # Secondary Compound Cards (If provided)
         for s_idx, sec_sm in enumerate(cur_secondary):
+            safe_sec = html.escape(sec_sm)
             sec_img = get_chemical_structure_img(sec_sm, width=220, height=200)
             sec_desc = get_molecular_descriptors(sec_sm)
             sec_desc_pills = format_descriptor_pills(sec_desc)
@@ -1409,8 +1510,8 @@ with tab_predict:
                         <span class="ap1-comp-name">Secondary Co-reactant {s_idx+1}</span>
                         <span class="ap1-comp-role role-secondary">Co-reactant / Excipient</span>
                     </div>
-                    <div class="ap1-smiles-box" title="{sec_sm}">
-                        {sec_sm}
+                    <div class="ap1-smiles-box" title="{safe_sec}">
+                        {safe_sec}
                     </div>
                     <div class="ap1-tag-group">
                         {sec_desc_pills}
@@ -1515,7 +1616,7 @@ with tab_predict:
                 <div class="ap1-imp-body">
                     <div class="ap1-imp-header">
                         <div>
-                            <div class="ap1-imp-title">{imp.get('smiles') or imp.get('iupacName', 'Impurity')}</div>
+                            <div class="ap1-imp-title">{html.escape(str(imp.get('smiles') or imp.get('iupacName', 'Impurity')))}</div>
                             <div class="ap1-tag-group" style="margin-top: 0.4rem;">
                                 {imp_desc_pills}
                             </div>

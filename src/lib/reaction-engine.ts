@@ -964,8 +964,10 @@ export function generateComputationalPrediction(
   const T = 298.15; // Kelvin
   const RT = R * T;
 
-  const expTerms = validCandidates.map(c => Math.exp(-c.deltaG / RT));
-  const sumExp = expTerms.reduce((acc, v) => acc + v, 0);
+  const rawExps = validCandidates.map(c => -c.deltaG / RT);
+  const maxExp = rawExps.length > 0 ? Math.max(...rawExps) : 0;
+  const expTerms = rawExps.map(e => Math.exp(Math.max(-500, Math.min(500, e - maxExp))));
+  const sumExp = expTerms.reduce((acc, v) => acc + v, 0) || 1.0;
 
   const calculatedImpurities = validCandidates.map((cand, idx) => {
     const pBoltzmann = Math.min(0.99, Math.max(0.01, Number((expTerms[idx] / sumExp).toFixed(4))));
