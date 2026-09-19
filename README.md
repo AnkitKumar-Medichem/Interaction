@@ -10,30 +10,22 @@ INTERACTION predicts chemical cross-interactions, reactivity, and degradation pa
 
 ## 🚀 Streamlit Cloud Deployment Guide
 
-This repository is configured for immediate deployment on **[Streamlit Community Cloud](https://share.streamlit.io/)**.
+This repository is optimized for one-click deployment on **[Streamlit Community Cloud](https://share.streamlit.io/)**.
 
-### Step 1: Push or Fork this Repository
-Ensure your repository contains:
-- `app.py` (Streamlit application entry point serving the exact GUI)
-- `static/` (Pre-compiled production assets for instant deployment with the identical GUI)
-- `requirements.txt` (Python dependencies)
-- `.streamlit/config.toml` (Streamlit configuration with `enableStaticServing = true`)
-
-### Step 2: Create App on Streamlit Cloud
-1. Sign in to [share.streamlit.io](https://share.streamlit.io/) with your GitHub account.
-2. Click **"Create app"** (or **"New app"**).
-3. Select your repository, branch (usually `main`), and set **Main file path** to:
+### Step 1: Deploy on Streamlit Cloud
+1. Fork or push this repository to your GitHub account.
+2. Go to **[share.streamlit.io](https://share.streamlit.io/)** and click **"Create app"**.
+3. Select your repository and branch (`main`).
+4. Set the **Main file path** to:
    ```text
    app.py
    ```
+5. Click **"Deploy!"**
 
-### Step 3: Configure Gemini API Secret
-1. In the app settings on Streamlit Cloud, click **"Advanced settings..."** -> **"Secrets"**.
-2. Add your Gemini API key in TOML format:
-   ```toml
-   GEMINI_API_KEY = "your_actual_gemini_api_key_here"
-   ```
-3. Click **"Save"** and **"Deploy"**. Your application will build, install dependencies, and launch live!
+Streamlit Cloud will automatically detect:
+- `requirements.txt` to install the chemistry & visualization libraries (`rdkit`, `pandas`, `numpy`, `matplotlib`, `seaborn`).
+- `packages.txt` to install the system graphic libraries (`libgl1`, `libglib2.0-0`, `libxrender1`, etc.) required for 2D molecular structure rendering.
+- `.streamlit/config.toml` for UI theme presets and optimal server settings.
 
 ---
 

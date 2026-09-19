@@ -2,3 +2,5 @@ libxrender1
 libxext6
 libxcomposite1
 libfontconfig1
+libgl1
+libglib2.0-0
