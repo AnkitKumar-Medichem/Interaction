@@ -1,0 +1,2582 @@
+{
+  "water": {
+    "smiles": "O",
+    "name": "Water",
+    "category": "Solvent"
+  },
+  "h2o": {
+    "smiles": "O",
+    "name": "Water",
+    "category": "Solvent"
+  },
+  "methanol": {
+    "smiles": "CO",
+    "name": "Methanol",
+    "category": "Alcohol"
+  },
+  "meoh": {
+    "smiles": "CO",
+    "name": "Methanol",
+    "category": "Alcohol"
+  },
+  "methyl alcohol": {
+    "smiles": "CO",
+    "name": "Methanol",
+    "category": "Alcohol"
+  },
+  "ethanol": {
+    "smiles": "CCO",
+    "name": "Ethanol",
+    "category": "Alcohol"
+  },
+  "etoh": {
+    "smiles": "CCO",
+    "name": "Ethanol",
+    "category": "Alcohol"
+  },
+  "ethyl alcohol": {
+    "smiles": "CCO",
+    "name": "Ethanol",
+    "category": "Alcohol"
+  },
+  "propan-2-ol": {
+    "smiles": "CC(C)O",
+    "name": "Propan-2-ol",
+    "category": "Alcohol"
+  },
+  "isopropanol": {
+    "smiles": "CC(C)O",
+    "name": "Propan-2-ol",
+    "category": "Alcohol"
+  },
+  "isopropyl alcohol": {
+    "smiles": "CC(C)O",
+    "name": "Propan-2-ol",
+    "category": "Alcohol"
+  },
+  "2-propanol": {
+    "smiles": "CC(C)O",
+    "name": "Propan-2-ol",
+    "category": "Alcohol"
+  },
+  "ipa": {
+    "smiles": "CC(C)O",
+    "name": "Propan-2-ol",
+    "category": "Alcohol"
+  },
+  "1-propanol": {
+    "smiles": "CCCO",
+    "name": "Propan-1-ol",
+    "category": "Alcohol"
+  },
+  "n-propanol": {
+    "smiles": "CCCO",
+    "name": "Propan-1-ol",
+    "category": "Alcohol"
+  },
+  "propanol": {
+    "smiles": "CCCO",
+    "name": "Propan-1-ol",
+    "category": "Alcohol"
+  },
+  "1-butanol": {
+    "smiles": "CCCCO",
+    "name": "Butan-1-ol",
+    "category": "Alcohol"
+  },
+  "n-butanol": {
+    "smiles": "CCCCO",
+    "name": "Butan-1-ol",
+    "category": "Alcohol"
+  },
+  "butanol": {
+    "smiles": "CCCCO",
+    "name": "Butan-1-ol",
+    "category": "Alcohol"
+  },
+  "tert-butanol": {
+    "smiles": "CC(C)(C)O",
+    "name": "tert-Butanol",
+    "category": "Alcohol"
+  },
+  "t-butanol": {
+    "smiles": "CC(C)(C)O",
+    "name": "tert-Butanol",
+    "category": "Alcohol"
+  },
+  "2-methyl-2-propanol": {
+    "smiles": "CC(C)(C)O",
+    "name": "tert-Butanol",
+    "category": "Alcohol"
+  },
+  "cyclohexanol": {
+    "smiles": "OC1CCCCC1",
+    "name": "Cyclohexanol",
+    "category": "Alcohol"
+  },
+  "benzyl alcohol": {
+    "smiles": "OCc1ccccc1",
+    "name": "Benzyl alcohol",
+    "category": "Alcohol"
+  },
+  "ethylene glycol": {
+    "smiles": "OCCO",
+    "name": "Ethylene glycol",
+    "category": "Polyol"
+  },
+  "1 2-ethanediol": {
+    "smiles": "OCCO",
+    "name": "Ethylene glycol",
+    "category": "Polyol"
+  },
+  "propylene glycol": {
+    "smiles": "CC(O)CO",
+    "name": "Propylene glycol",
+    "category": "Polyol"
+  },
+  "1 2-propanediol": {
+    "smiles": "CC(O)CO",
+    "name": "Propylene glycol",
+    "category": "Polyol"
+  },
+  "glycerol": {
+    "smiles": "OCC(O)CO",
+    "name": "Glycerol",
+    "category": "Polyol"
+  },
+  "glycerin": {
+    "smiles": "OCC(O)CO",
+    "name": "Glycerol",
+    "category": "Polyol"
+  },
+  "glycerine": {
+    "smiles": "OCC(O)CO",
+    "name": "Glycerol",
+    "category": "Polyol"
+  },
+  "diethylene glycol": {
+    "smiles": "OCCOCCO",
+    "name": "Diethylene glycol",
+    "category": "Polyether"
+  },
+  "polyethylene glycol": {
+    "smiles": "OCCOCCOCCO",
+    "name": "Polyethylene glycol (triethylene glycol model)",
+    "category": "Polyether"
+  },
+  "peg": {
+    "smiles": "OCCOCCOCCO",
+    "name": "Polyethylene glycol (triethylene glycol model)",
+    "category": "Polyether"
+  },
+  "acetone": {
+    "smiles": "CC(C)=O",
+    "name": "Acetone",
+    "category": "Ketone"
+  },
+  "propanone": {
+    "smiles": "CC(C)=O",
+    "name": "Acetone",
+    "category": "Ketone"
+  },
+  "2-butanone": {
+    "smiles": "CCC(C)=O",
+    "name": "Butan-2-one",
+    "category": "Ketone"
+  },
+  "mek": {
+    "smiles": "CCC(C)=O",
+    "name": "Butan-2-one",
+    "category": "Ketone"
+  },
+  "methyl ethyl ketone": {
+    "smiles": "CCC(C)=O",
+    "name": "Butan-2-one",
+    "category": "Ketone"
+  },
+  "cyclohexanone": {
+    "smiles": "O=C1CCCCC1",
+    "name": "Cyclohexanone",
+    "category": "Ketone"
+  },
+  "acetophenone": {
+    "smiles": "CC(=O)c1ccccc1",
+    "name": "Acetophenone",
+    "category": "Ketone"
+  },
+  "benzophenone": {
+    "smiles": "O=C(c1ccccc1)c1ccccc1",
+    "name": "Benzophenone",
+    "category": "Ketone"
+  },
+  "acetonitrile": {
+    "smiles": "CC#N",
+    "name": "Acetonitrile",
+    "category": "Nitrile"
+  },
+  "methyl cyanide": {
+    "smiles": "CC#N",
+    "name": "Acetonitrile",
+    "category": "Nitrile"
+  },
+  "benzonitrile": {
+    "smiles": "N#Cc1ccccc1",
+    "name": "Benzonitrile",
+    "category": "Nitrile"
+  },
+  "dimethylformamide": {
+    "smiles": "CN(C)C=O",
+    "name": "N,N-Dimethylformamide",
+    "category": "Amide"
+  },
+  "dmf": {
+    "smiles": "CN(C)C=O",
+    "name": "N,N-Dimethylformamide",
+    "category": "Amide"
+  },
+  "n n-dimethylformamide": {
+    "smiles": "CN(C)C=O",
+    "name": "N,N-Dimethylformamide",
+    "category": "Amide"
+  },
+  "dimethylacetamide": {
+    "smiles": "CN(C)C(C)=O",
+    "name": "N,N-Dimethylacetamide",
+    "category": "Amide"
+  },
+  "dmac": {
+    "smiles": "CN(C)C(C)=O",
+    "name": "N,N-Dimethylacetamide",
+    "category": "Amide"
+  },
+  "n n-dimethylacetamide": {
+    "smiles": "CN(C)C(C)=O",
+    "name": "N,N-Dimethylacetamide",
+    "category": "Amide"
+  },
+  "n-methyl-2-pyrrolidone": {
+    "smiles": "CN1CCCC1=O",
+    "name": "N-Methyl-2-pyrrolidone",
+    "category": "Lactam"
+  },
+  "nmp": {
+    "smiles": "CN1CCCC1=O",
+    "name": "N-Methyl-2-pyrrolidone",
+    "category": "Lactam"
+  },
+  "n-methylpyrrolidone": {
+    "smiles": "CN1CCCC1=O",
+    "name": "N-Methyl-2-pyrrolidone",
+    "category": "Lactam"
+  },
+  "dimethyl sulfoxide": {
+    "smiles": "CS(C)=O",
+    "name": "Dimethyl sulfoxide",
+    "category": "Sulfoxide"
+  },
+  "dmso": {
+    "smiles": "CS(C)=O",
+    "name": "Dimethyl sulfoxide",
+    "category": "Sulfoxide"
+  },
+  "dimethyl sulfone": {
+    "smiles": "CS(C)(=O)=O",
+    "name": "Dimethyl sulfone",
+    "category": "Sulfone"
+  },
+  "tetrahydrofuran": {
+    "smiles": "C1CCOC1",
+    "name": "Tetrahydrofuran",
+    "category": "Ether"
+  },
+  "thf": {
+    "smiles": "C1CCOC1",
+    "name": "Tetrahydrofuran",
+    "category": "Ether"
+  },
+  "1 4-dioxane": {
+    "smiles": "C1COCCO1",
+    "name": "1,4-Dioxane",
+    "category": "Ether"
+  },
+  "dioxane": {
+    "smiles": "C1COCCO1",
+    "name": "1,4-Dioxane",
+    "category": "Ether"
+  },
+  "diethyl ether": {
+    "smiles": "CCOCC",
+    "name": "Diethyl ether",
+    "category": "Ether"
+  },
+  "ether": {
+    "smiles": "CCOCC",
+    "name": "Diethyl ether",
+    "category": "Ether"
+  },
+  "ethoxyethane": {
+    "smiles": "CCOCC",
+    "name": "Diethyl ether",
+    "category": "Ether"
+  },
+  "methyl tert-butyl ether": {
+    "smiles": "COC(C)(C)C",
+    "name": "Methyl tert-butyl ether",
+    "category": "Ether"
+  },
+  "mtbe": {
+    "smiles": "COC(C)(C)C",
+    "name": "Methyl tert-butyl ether",
+    "category": "Ether"
+  },
+  "anisole": {
+    "smiles": "COc1ccccc1",
+    "name": "Anisole",
+    "category": "Ether"
+  },
+  "methoxybenzene": {
+    "smiles": "COc1ccccc1",
+    "name": "Anisole",
+    "category": "Ether"
+  },
+  "ethyl acetate": {
+    "smiles": "CCOC(C)=O",
+    "name": "Ethyl acetate",
+    "category": "Ester"
+  },
+  "etoac": {
+    "smiles": "CCOC(C)=O",
+    "name": "Ethyl acetate",
+    "category": "Ester"
+  },
+  "methyl acetate": {
+    "smiles": "COC(C)=O",
+    "name": "Methyl acetate",
+    "category": "Ester"
+  },
+  "butyl acetate": {
+    "smiles": "CCCCOC(C)=O",
+    "name": "Butyl acetate",
+    "category": "Ester"
+  },
+  "n-butyl acetate": {
+    "smiles": "CCCCOC(C)=O",
+    "name": "Butyl acetate",
+    "category": "Ester"
+  },
+  "tert-butyl acetate": {
+    "smiles": "CC(=O)OC(C)(C)C",
+    "name": "tert-Butyl acetate",
+    "category": "Ester"
+  },
+  "phenyl acetate": {
+    "smiles": "CC(=O)Oc1ccccc1",
+    "name": "Phenyl acetate",
+    "category": "Ester"
+  },
+  "vinyl acetate": {
+    "smiles": "CC(=O)OC=C",
+    "name": "Vinyl acetate",
+    "category": "Ester"
+  },
+  "methyl benzoate": {
+    "smiles": "COC(=O)c1ccccc1",
+    "name": "Methyl benzoate",
+    "category": "Ester"
+  },
+  "ethyl formate": {
+    "smiles": "CCOC=O",
+    "name": "Ethyl formate",
+    "category": "Ester"
+  },
+  "ethyl acrylate": {
+    "smiles": "C=CC(=O)OCC",
+    "name": "Ethyl acrylate",
+    "category": "Michael acceptor"
+  },
+  "methyl methacrylate": {
+    "smiles": "COC(=O)C(C)=C",
+    "name": "Methyl methacrylate",
+    "category": "Michael acceptor"
+  },
+  "mma": {
+    "smiles": "COC(=O)C(C)=C",
+    "name": "Methyl methacrylate",
+    "category": "Michael acceptor"
+  },
+  "dimethyl carbonate": {
+    "smiles": "COC(=O)OC",
+    "name": "Dimethyl carbonate",
+    "category": "Carbonate"
+  },
+  "diethyl phthalate": {
+    "smiles": "CCOC(=O)c1ccccc1C(=O)OCC",
+    "name": "Diethyl phthalate",
+    "category": "Ester"
+  },
+  "triacetin": {
+    "smiles": "CC(=O)OCC(COC(C)=O)OC(C)=O",
+    "name": "Triacetin",
+    "category": "Ester"
+  },
+  "glyceryl triacetate": {
+    "smiles": "CC(=O)OCC(COC(C)=O)OC(C)=O",
+    "name": "Triacetin",
+    "category": "Ester"
+  },
+  "acetylsalicylic acid": {
+    "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+    "name": "2-Acetoxybenzoic acid (acetylsalicylic acid)",
+    "category": "Aryl ester / acid"
+  },
+  "aspirin": {
+    "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+    "name": "2-Acetoxybenzoic acid (acetylsalicylic acid)",
+    "category": "Aryl ester / acid"
+  },
+  "2-acetoxybenzoic acid": {
+    "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+    "name": "2-Acetoxybenzoic acid (acetylsalicylic acid)",
+    "category": "Aryl ester / acid"
+  },
+  "dichloromethane": {
+    "smiles": "ClCCl",
+    "name": "Dichloromethane",
+    "category": "Alkyl halide"
+  },
+  "dcm": {
+    "smiles": "ClCCl",
+    "name": "Dichloromethane",
+    "category": "Alkyl halide"
+  },
+  "methylene chloride": {
+    "smiles": "ClCCl",
+    "name": "Dichloromethane",
+    "category": "Alkyl halide"
+  },
+  "chloroform": {
+    "smiles": "ClC(Cl)Cl",
+    "name": "Chloroform",
+    "category": "Alkyl halide"
+  },
+  "trichloromethane": {
+    "smiles": "ClC(Cl)Cl",
+    "name": "Chloroform",
+    "category": "Alkyl halide"
+  },
+  "carbon tetrachloride": {
+    "smiles": "ClC(Cl)(Cl)Cl",
+    "name": "Carbon tetrachloride",
+    "category": "Alkyl halide"
+  },
+  "tetrachloromethane": {
+    "smiles": "ClC(Cl)(Cl)Cl",
+    "name": "Carbon tetrachloride",
+    "category": "Alkyl halide"
+  },
+  "1 2-dichloroethane": {
+    "smiles": "ClCCCl",
+    "name": "1,2-Dichloroethane",
+    "category": "Alkyl halide"
+  },
+  "dce": {
+    "smiles": "ClCCCl",
+    "name": "1,2-Dichloroethane",
+    "category": "Alkyl halide"
+  },
+  "hexane": {
+    "smiles": "CCCCCC",
+    "name": "Hexane",
+    "category": "Hydrocarbon"
+  },
+  "n-hexane": {
+    "smiles": "CCCCCC",
+    "name": "Hexane",
+    "category": "Hydrocarbon"
+  },
+  "heptane": {
+    "smiles": "CCCCCCC",
+    "name": "Heptane",
+    "category": "Hydrocarbon"
+  },
+  "n-heptane": {
+    "smiles": "CCCCCCC",
+    "name": "Heptane",
+    "category": "Hydrocarbon"
+  },
+  "cyclohexane": {
+    "smiles": "C1CCCCC1",
+    "name": "Cyclohexane",
+    "category": "Hydrocarbon"
+  },
+  "methane": {
+    "smiles": "C",
+    "name": "Methane",
+    "category": "Hydrocarbon"
+  },
+  "ethylene": {
+    "smiles": "C=C",
+    "name": "Ethene",
+    "category": "Alkene"
+  },
+  "ethene": {
+    "smiles": "C=C",
+    "name": "Ethene",
+    "category": "Alkene"
+  },
+  "propene": {
+    "smiles": "CC=C",
+    "name": "Propene",
+    "category": "Alkene"
+  },
+  "propylene": {
+    "smiles": "CC=C",
+    "name": "Propene",
+    "category": "Alkene"
+  },
+  "isobutene": {
+    "smiles": "CC(C)=C",
+    "name": "Isobutene",
+    "category": "Alkene"
+  },
+  "isobutylene": {
+    "smiles": "CC(C)=C",
+    "name": "Isobutene",
+    "category": "Alkene"
+  },
+  "1-hexene": {
+    "smiles": "CCCCC=C",
+    "name": "1-Hexene",
+    "category": "Alkene"
+  },
+  "cyclohexene": {
+    "smiles": "C1=CCCCC1",
+    "name": "Cyclohexene",
+    "category": "Alkene"
+  },
+  "styrene": {
+    "smiles": "C=Cc1ccccc1",
+    "name": "Styrene",
+    "category": "Alkene"
+  },
+  "1 3-butadiene": {
+    "smiles": "C=CC=C",
+    "name": "1,3-Butadiene",
+    "category": "Diene"
+  },
+  "butadiene": {
+    "smiles": "C=CC=C",
+    "name": "1,3-Butadiene",
+    "category": "Diene"
+  },
+  "cyclopentadiene": {
+    "smiles": "C1=CCC=C1",
+    "name": "Cyclopentadiene",
+    "category": "Diene"
+  },
+  "acetylene": {
+    "smiles": "C#C",
+    "name": "Ethyne",
+    "category": "Alkyne"
+  },
+  "ethyne": {
+    "smiles": "C#C",
+    "name": "Ethyne",
+    "category": "Alkyne"
+  },
+  "phenylacetylene": {
+    "smiles": "C#Cc1ccccc1",
+    "name": "Phenylacetylene",
+    "category": "Alkyne"
+  },
+  "benzene": {
+    "smiles": "c1ccccc1",
+    "name": "Benzene",
+    "category": "Aromatic"
+  },
+  "toluene": {
+    "smiles": "Cc1ccccc1",
+    "name": "Toluene",
+    "category": "Aromatic"
+  },
+  "methylbenzene": {
+    "smiles": "Cc1ccccc1",
+    "name": "Toluene",
+    "category": "Aromatic"
+  },
+  "o-xylene": {
+    "smiles": "Cc1ccccc1C",
+    "name": "o-Xylene",
+    "category": "Aromatic"
+  },
+  "xylene": {
+    "smiles": "Cc1ccccc1C",
+    "name": "o-Xylene",
+    "category": "Aromatic"
+  },
+  "ethylbenzene": {
+    "smiles": "CCc1ccccc1",
+    "name": "Ethylbenzene",
+    "category": "Aromatic"
+  },
+  "cumene": {
+    "smiles": "CC(C)c1ccccc1",
+    "name": "Cumene",
+    "category": "Aromatic"
+  },
+  "isopropylbenzene": {
+    "smiles": "CC(C)c1ccccc1",
+    "name": "Cumene",
+    "category": "Aromatic"
+  },
+  "naphthalene": {
+    "smiles": "c1ccc2ccccc2c1",
+    "name": "Naphthalene",
+    "category": "Aromatic"
+  },
+  "biphenyl": {
+    "smiles": "c1ccc(cc1)-c1ccccc1",
+    "name": "Biphenyl",
+    "category": "Aromatic"
+  },
+  "chlorobenzene": {
+    "smiles": "Clc1ccccc1",
+    "name": "Chlorobenzene",
+    "category": "Aryl halide"
+  },
+  "bromobenzene": {
+    "smiles": "Brc1ccccc1",
+    "name": "Bromobenzene",
+    "category": "Aryl halide"
+  },
+  "iodobenzene": {
+    "smiles": "Ic1ccccc1",
+    "name": "Iodobenzene",
+    "category": "Aryl halide"
+  },
+  "fluorobenzene": {
+    "smiles": "Fc1ccccc1",
+    "name": "Fluorobenzene",
+    "category": "Aryl halide"
+  },
+  "benzotrifluoride": {
+    "smiles": "FC(F)(F)c1ccccc1",
+    "name": "Benzotrifluoride",
+    "category": "Aryl halide"
+  },
+  "trifluorotoluene": {
+    "smiles": "FC(F)(F)c1ccccc1",
+    "name": "Benzotrifluoride",
+    "category": "Aryl halide"
+  },
+  "1-chloro-2 4-dinitrobenzene": {
+    "smiles": "Clc1ccc(cc1[N+]([O-])=O)[N+]([O-])=O",
+    "name": "1-Chloro-2,4-dinitrobenzene",
+    "category": "Aryl halide"
+  },
+  "cdnb": {
+    "smiles": "Clc1ccc(cc1[N+]([O-])=O)[N+]([O-])=O",
+    "name": "1-Chloro-2,4-dinitrobenzene",
+    "category": "Aryl halide"
+  },
+  "nitrobenzene": {
+    "smiles": "[O-][N+](=O)c1ccccc1",
+    "name": "Nitrobenzene",
+    "category": "Nitro"
+  },
+  "4-nitrophenol": {
+    "smiles": "Oc1ccc(cc1)[N+]([O-])=O",
+    "name": "4-Nitrophenol",
+    "category": "Phenol"
+  },
+  "p-nitrophenol": {
+    "smiles": "Oc1ccc(cc1)[N+]([O-])=O",
+    "name": "4-Nitrophenol",
+    "category": "Phenol"
+  },
+  "nitromethane": {
+    "smiles": "C[N+]([O-])=O",
+    "name": "Nitromethane",
+    "category": "Nitro"
+  },
+  "nitroethane": {
+    "smiles": "CC[N+]([O-])=O",
+    "name": "Nitroethane",
+    "category": "Nitro"
+  },
+  "acetic acid": {
+    "smiles": "CC(=O)O",
+    "name": "Acetic acid",
+    "category": "Carboxylic acid"
+  },
+  "ethanoic acid": {
+    "smiles": "CC(=O)O",
+    "name": "Acetic acid",
+    "category": "Carboxylic acid"
+  },
+  "aa": {
+    "smiles": "CC(=O)O",
+    "name": "Acetic acid",
+    "category": "Carboxylic acid"
+  },
+  "formic acid": {
+    "smiles": "OC=O",
+    "name": "Formic acid",
+    "category": "Carboxylic acid"
+  },
+  "methanoic acid": {
+    "smiles": "OC=O",
+    "name": "Formic acid",
+    "category": "Carboxylic acid"
+  },
+  "propionic acid": {
+    "smiles": "CCC(=O)O",
+    "name": "Propanoic acid",
+    "category": "Carboxylic acid"
+  },
+  "propanoic acid": {
+    "smiles": "CCC(=O)O",
+    "name": "Propanoic acid",
+    "category": "Carboxylic acid"
+  },
+  "butyric acid": {
+    "smiles": "CCCC(=O)O",
+    "name": "Butanoic acid",
+    "category": "Carboxylic acid"
+  },
+  "butanoic acid": {
+    "smiles": "CCCC(=O)O",
+    "name": "Butanoic acid",
+    "category": "Carboxylic acid"
+  },
+  "benzoic acid": {
+    "smiles": "OC(=O)c1ccccc1",
+    "name": "Benzoic acid",
+    "category": "Carboxylic acid"
+  },
+  "salicylic acid": {
+    "smiles": "OC(=O)c1ccccc1O",
+    "name": "Salicylic acid",
+    "category": "Carboxylic acid / phenol"
+  },
+  "2-hydroxybenzoic acid": {
+    "smiles": "OC(=O)c1ccccc1O",
+    "name": "Salicylic acid",
+    "category": "Carboxylic acid / phenol"
+  },
+  "gentisic acid": {
+    "smiles": "OC(=O)c1cc(O)ccc1O",
+    "name": "Gentisic acid",
+    "category": "Carboxylic acid / phenol"
+  },
+  "2 5-dihydroxybenzoic acid": {
+    "smiles": "OC(=O)c1cc(O)ccc1O",
+    "name": "Gentisic acid",
+    "category": "Carboxylic acid / phenol"
+  },
+  "gallic acid": {
+    "smiles": "OC(=O)c1cc(O)c(O)c(O)c1",
+    "name": "Gallic acid",
+    "category": "Carboxylic acid / phenol"
+  },
+  "phthalic acid": {
+    "smiles": "OC(=O)c1ccccc1C(O)=O",
+    "name": "Phthalic acid",
+    "category": "Carboxylic acid"
+  },
+  "cinnamic acid": {
+    "smiles": "OC(=O)C=Cc1ccccc1",
+    "name": "Cinnamic acid",
+    "category": "Michael acceptor"
+  },
+  "oxalic acid": {
+    "smiles": "OC(=O)C(O)=O",
+    "name": "Oxalic acid",
+    "category": "Carboxylic acid"
+  },
+  "malonic acid": {
+    "smiles": "OC(=O)CC(O)=O",
+    "name": "Malonic acid",
+    "category": "Carboxylic acid"
+  },
+  "succinic acid": {
+    "smiles": "OC(=O)CCC(O)=O",
+    "name": "Succinic acid",
+    "category": "Carboxylic acid"
+  },
+  "adipic acid": {
+    "smiles": "OC(=O)CCCCC(O)=O",
+    "name": "Adipic acid",
+    "category": "Carboxylic acid"
+  },
+  "maleic acid": {
+    "smiles": "OC(=O)C=CC(O)=O",
+    "name": "Maleic acid",
+    "category": "Michael acceptor"
+  },
+  "fumaric acid": {
+    "smiles": "OC(=O)C=CC(O)=O",
+    "name": "Fumaric acid",
+    "category": "Michael acceptor"
+  },
+  "acetoacetic acid": {
+    "smiles": "CC(=O)CC(O)=O",
+    "name": "Acetoacetic acid",
+    "category": "Keto acid"
+  },
+  "3-oxobutanoic acid": {
+    "smiles": "CC(=O)CC(O)=O",
+    "name": "Acetoacetic acid",
+    "category": "Keto acid"
+  },
+  "pyruvic acid": {
+    "smiles": "CC(=O)C(O)=O",
+    "name": "Pyruvic acid",
+    "category": "Keto acid"
+  },
+  "lactic acid": {
+    "smiles": "CC(O)C(O)=O",
+    "name": "Lactic acid",
+    "category": "Hydroxy acid"
+  },
+  "glycolic acid": {
+    "smiles": "OCC(O)=O",
+    "name": "Glycolic acid",
+    "category": "Hydroxy acid"
+  },
+  "tartaric acid": {
+    "smiles": "OC(C(O)C(O)=O)C(O)=O",
+    "name": "Tartaric acid",
+    "category": "Hydroxy acid"
+  },
+  "citric acid": {
+    "smiles": "OC(=O)CC(O)(CC(O)=O)C(O)=O",
+    "name": "Citric acid",
+    "category": "Hydroxy acid"
+  },
+  "ascorbic acid": {
+    "smiles": "OCC(O)C1OC(=O)C(O)=C1O",
+    "name": "Ascorbic acid",
+    "category": "Enediol lactone"
+  },
+  "vitamin c": {
+    "smiles": "OCC(O)C1OC(=O)C(O)=C1O",
+    "name": "Ascorbic acid",
+    "category": "Enediol lactone"
+  },
+  "trifluoroacetic acid": {
+    "smiles": "OC(=O)C(F)(F)F",
+    "name": "Trifluoroacetic acid",
+    "category": "Carboxylic acid"
+  },
+  "tfa": {
+    "smiles": "OC(=O)C(F)(F)F",
+    "name": "Trifluoroacetic acid",
+    "category": "Carboxylic acid"
+  },
+  "chloroacetic acid": {
+    "smiles": "OC(=O)CCl",
+    "name": "Chloroacetic acid",
+    "category": "Carboxylic acid"
+  },
+  "trichloroacetic acid": {
+    "smiles": "OC(=O)C(Cl)(Cl)Cl",
+    "name": "Trichloroacetic acid",
+    "category": "Carboxylic acid"
+  },
+  "tca": {
+    "smiles": "OC(=O)C(Cl)(Cl)Cl",
+    "name": "Trichloroacetic acid",
+    "category": "Carboxylic acid"
+  },
+  "lauric acid": {
+    "smiles": "CCCCCCCCCCCC(O)=O",
+    "name": "Lauric acid",
+    "category": "Fatty acid"
+  },
+  "dodecanoic acid": {
+    "smiles": "CCCCCCCCCCCC(O)=O",
+    "name": "Lauric acid",
+    "category": "Fatty acid"
+  },
+  "palmitic acid": {
+    "smiles": "CCCCCCCCCCCCCCCC(O)=O",
+    "name": "Palmitic acid",
+    "category": "Fatty acid"
+  },
+  "hexadecanoic acid": {
+    "smiles": "CCCCCCCCCCCCCCCC(O)=O",
+    "name": "Palmitic acid",
+    "category": "Fatty acid"
+  },
+  "stearic acid": {
+    "smiles": "CCCCCCCCCCCCCCCCCC(O)=O",
+    "name": "Stearic acid",
+    "category": "Fatty acid"
+  },
+  "octadecanoic acid": {
+    "smiles": "CCCCCCCCCCCCCCCCCC(O)=O",
+    "name": "Stearic acid",
+    "category": "Fatty acid"
+  },
+  "oleic acid": {
+    "smiles": "CCCCCCCCC=CCCCCCCCC(O)=O",
+    "name": "Oleic acid",
+    "category": "Fatty acid"
+  },
+  "linoleic acid": {
+    "smiles": "CCCCCC=CCC=CCCCCCCCC(O)=O",
+    "name": "Linoleic acid",
+    "category": "Fatty acid"
+  },
+  "methyl oleate": {
+    "smiles": "CCCCCCCCC=CCCCCCCCC(=O)OC",
+    "name": "Methyl oleate",
+    "category": "Ester"
+  },
+  "sodium acetate": {
+    "smiles": "CC([O-])=O.[Na+]",
+    "name": "Sodium acetate",
+    "category": "Carboxylate salt"
+  },
+  "sodium benzoate": {
+    "smiles": "[O-]C(=O)c1ccccc1.[Na+]",
+    "name": "Sodium benzoate",
+    "category": "Carboxylate salt"
+  },
+  "sodium citrate": {
+    "smiles": "OC(CC([O-])=O)(CC([O-])=O)C([O-])=O.[Na+].[Na+].[Na+]",
+    "name": "Trisodium citrate",
+    "category": "Carboxylate salt"
+  },
+  "trisodium citrate": {
+    "smiles": "OC(CC([O-])=O)(CC([O-])=O)C([O-])=O.[Na+].[Na+].[Na+]",
+    "name": "Trisodium citrate",
+    "category": "Carboxylate salt"
+  },
+  "magnesium stearate": {
+    "smiles": "[Mg+2].[O-]C(=O)CCCCCCCCCCCCCCCCC.[O-]C(=O)CCCCCCCCCCCCCCCCC",
+    "name": "Magnesium stearate",
+    "category": "Metal carboxylate"
+  },
+  "calcium stearate": {
+    "smiles": "[Ca+2].[O-]C(=O)CCCCCCCCCCCCCCCCC.[O-]C(=O)CCCCCCCCCCCCCCCCC",
+    "name": "Calcium stearate",
+    "category": "Metal carboxylate"
+  },
+  "sodium stearate": {
+    "smiles": "[Na+].[O-]C(=O)CCCCCCCCCCCCCCCCC",
+    "name": "Sodium stearate",
+    "category": "Metal carboxylate"
+  },
+  "sodium stearyl fumarate": {
+    "smiles": "CCCCCCCCCCCCCCCCCCOC(=O)C=CC([O-])=O.[Na+]",
+    "name": "Sodium stearyl fumarate",
+    "category": "Ester / carboxylate"
+  },
+  "acetic anhydride": {
+    "smiles": "CC(=O)OC(C)=O",
+    "name": "Acetic anhydride",
+    "category": "Anhydride"
+  },
+  "succinic anhydride": {
+    "smiles": "O=C1CCC(=O)O1",
+    "name": "Succinic anhydride",
+    "category": "Anhydride"
+  },
+  "maleic anhydride": {
+    "smiles": "O=C1C=CC(=O)O1",
+    "name": "Maleic anhydride",
+    "category": "Anhydride"
+  },
+  "phthalic anhydride": {
+    "smiles": "O=C1OC(=O)c2ccccc12",
+    "name": "Phthalic anhydride",
+    "category": "Anhydride"
+  },
+  "acetyl chloride": {
+    "smiles": "CC(Cl)=O",
+    "name": "Acetyl chloride",
+    "category": "Acyl halide"
+  },
+  "benzoyl chloride": {
+    "smiles": "O=C(Cl)c1ccccc1",
+    "name": "Benzoyl chloride",
+    "category": "Acyl halide"
+  },
+  "benzoyl peroxide": {
+    "smiles": "O=C(OOC(=O)c1ccccc1)c1ccccc1",
+    "name": "Benzoyl peroxide",
+    "category": "Peroxide"
+  },
+  "gamma-butyrolactone": {
+    "smiles": "O=C1CCCO1",
+    "name": "gamma-Butyrolactone",
+    "category": "Lactone"
+  },
+  "butyrolactone": {
+    "smiles": "O=C1CCCO1",
+    "name": "gamma-Butyrolactone",
+    "category": "Lactone"
+  },
+  "gbl": {
+    "smiles": "O=C1CCCO1",
+    "name": "gamma-Butyrolactone",
+    "category": "Lactone"
+  },
+  "delta-valerolactone": {
+    "smiles": "O=C1CCCCO1",
+    "name": "delta-Valerolactone",
+    "category": "Lactone"
+  },
+  "valerolactone": {
+    "smiles": "O=C1CCCCO1",
+    "name": "delta-Valerolactone",
+    "category": "Lactone"
+  },
+  "beta-propiolactone": {
+    "smiles": "O=C1CCO1",
+    "name": "beta-Propiolactone",
+    "category": "Lactone"
+  },
+  "propiolactone": {
+    "smiles": "O=C1CCO1",
+    "name": "beta-Propiolactone",
+    "category": "Lactone"
+  },
+  "epsilon-caprolactone": {
+    "smiles": "O=C1CCCCCO1",
+    "name": "epsilon-Caprolactone",
+    "category": "Lactone"
+  },
+  "caprolactone": {
+    "smiles": "O=C1CCCCCO1",
+    "name": "epsilon-Caprolactone",
+    "category": "Lactone"
+  },
+  "coumarin": {
+    "smiles": "O=c1ccc2ccccc2o1",
+    "name": "Coumarin",
+    "category": "Lactone"
+  },
+  "caprolactam": {
+    "smiles": "O=C1CCCCCN1",
+    "name": "epsilon-Caprolactam",
+    "category": "Lactam"
+  },
+  "epsilon-caprolactam": {
+    "smiles": "O=C1CCCCCN1",
+    "name": "epsilon-Caprolactam",
+    "category": "Lactam"
+  },
+  "2-pyrrolidone": {
+    "smiles": "O=C1CCCN1",
+    "name": "2-Pyrrolidone",
+    "category": "Lactam"
+  },
+  "pyrrolidone": {
+    "smiles": "O=C1CCCN1",
+    "name": "2-Pyrrolidone",
+    "category": "Lactam"
+  },
+  "gamma-butyrolactam": {
+    "smiles": "O=C1CCCN1",
+    "name": "2-Pyrrolidone",
+    "category": "Lactam"
+  },
+  "2-azetidinone": {
+    "smiles": "O=C1CCN1",
+    "name": "2-Azetidinone (beta-lactam)",
+    "category": "Lactam"
+  },
+  "beta-lactam": {
+    "smiles": "O=C1CCN1",
+    "name": "2-Azetidinone (beta-lactam)",
+    "category": "Lactam"
+  },
+  "n-vinylpyrrolidone": {
+    "smiles": "C=CN1CCCC1=O",
+    "name": "N-Vinylpyrrolidone (PVP repeat-unit model)",
+    "category": "Lactam"
+  },
+  "nvp": {
+    "smiles": "C=CN1CCCC1=O",
+    "name": "N-Vinylpyrrolidone (PVP repeat-unit model)",
+    "category": "Lactam"
+  },
+  "polyvinylpyrrolidone": {
+    "smiles": "C=CN1CCCC1=O",
+    "name": "N-Vinylpyrrolidone (PVP repeat-unit model)",
+    "category": "Lactam"
+  },
+  "pvp": {
+    "smiles": "C=CN1CCCC1=O",
+    "name": "N-Vinylpyrrolidone (PVP repeat-unit model)",
+    "category": "Lactam"
+  },
+  "povidone": {
+    "smiles": "C=CN1CCCC1=O",
+    "name": "N-Vinylpyrrolidone (PVP repeat-unit model)",
+    "category": "Lactam"
+  },
+  "succinimide": {
+    "smiles": "O=C1CCC(=O)N1",
+    "name": "Succinimide",
+    "category": "Imide"
+  },
+  "phthalimide": {
+    "smiles": "O=C1NC(=O)c2ccccc12",
+    "name": "Phthalimide",
+    "category": "Imide"
+  },
+  "maleimide": {
+    "smiles": "O=C1C=CC(=O)N1",
+    "name": "Maleimide",
+    "category": "Imide"
+  },
+  "acetamide": {
+    "smiles": "CC(N)=O",
+    "name": "Acetamide",
+    "category": "Amide"
+  },
+  "formamide": {
+    "smiles": "NC=O",
+    "name": "Formamide",
+    "category": "Amide"
+  },
+  "benzamide": {
+    "smiles": "NC(=O)c1ccccc1",
+    "name": "Benzamide",
+    "category": "Amide"
+  },
+  "acetanilide": {
+    "smiles": "CC(=O)Nc1ccccc1",
+    "name": "Acetanilide",
+    "category": "Anilide"
+  },
+  "n-(4-hydroxyphenyl)acetamide": {
+    "smiles": "CC(=O)Nc1ccc(O)cc1",
+    "name": "N-(4-Hydroxyphenyl)acetamide",
+    "category": "Anilide / phenol"
+  },
+  "4-acetamidophenol": {
+    "smiles": "CC(=O)Nc1ccc(O)cc1",
+    "name": "N-(4-Hydroxyphenyl)acetamide",
+    "category": "Anilide / phenol"
+  },
+  "paracetamol": {
+    "smiles": "CC(=O)Nc1ccc(O)cc1",
+    "name": "N-(4-Hydroxyphenyl)acetamide",
+    "category": "Anilide / phenol"
+  },
+  "acetaminophen": {
+    "smiles": "CC(=O)Nc1ccc(O)cc1",
+    "name": "N-(4-Hydroxyphenyl)acetamide",
+    "category": "Anilide / phenol"
+  },
+  "urea": {
+    "smiles": "NC(N)=O",
+    "name": "Urea",
+    "category": "Urea"
+  },
+  "carbamide": {
+    "smiles": "NC(N)=O",
+    "name": "Urea",
+    "category": "Urea"
+  },
+  "thiourea": {
+    "smiles": "NC(N)=S",
+    "name": "Thiourea",
+    "category": "Thiocarbonyl"
+  },
+  "ethyl carbamate": {
+    "smiles": "CCOC(N)=O",
+    "name": "Ethyl carbamate",
+    "category": "Carbamate"
+  },
+  "urethane": {
+    "smiles": "CCOC(N)=O",
+    "name": "Ethyl carbamate",
+    "category": "Carbamate"
+  },
+  "di-tert-butyl dicarbonate": {
+    "smiles": "CC(C)(C)OC(=O)OC(=O)OC(C)(C)C",
+    "name": "Di-tert-butyl dicarbonate",
+    "category": "Anhydride"
+  },
+  "boc anhydride": {
+    "smiles": "CC(C)(C)OC(=O)OC(=O)OC(C)(C)C",
+    "name": "Di-tert-butyl dicarbonate",
+    "category": "Anhydride"
+  },
+  "boc2o": {
+    "smiles": "CC(C)(C)OC(=O)OC(=O)OC(C)(C)C",
+    "name": "Di-tert-butyl dicarbonate",
+    "category": "Anhydride"
+  },
+  "tert-butyl carbamate": {
+    "smiles": "CC(C)(C)OC(N)=O",
+    "name": "tert-Butyl carbamate",
+    "category": "Carbamate"
+  },
+  "boc-nh2": {
+    "smiles": "CC(C)(C)OC(N)=O",
+    "name": "tert-Butyl carbamate",
+    "category": "Carbamate"
+  },
+  "formaldehyde": {
+    "smiles": "C=O",
+    "name": "Formaldehyde",
+    "category": "Aldehyde"
+  },
+  "methanal": {
+    "smiles": "C=O",
+    "name": "Formaldehyde",
+    "category": "Aldehyde"
+  },
+  "acetaldehyde": {
+    "smiles": "CC=O",
+    "name": "Acetaldehyde",
+    "category": "Aldehyde"
+  },
+  "ethanal": {
+    "smiles": "CC=O",
+    "name": "Acetaldehyde",
+    "category": "Aldehyde"
+  },
+  "propionaldehyde": {
+    "smiles": "CCC=O",
+    "name": "Propanal",
+    "category": "Aldehyde"
+  },
+  "propanal": {
+    "smiles": "CCC=O",
+    "name": "Propanal",
+    "category": "Aldehyde"
+  },
+  "benzaldehyde": {
+    "smiles": "O=Cc1ccccc1",
+    "name": "Benzaldehyde",
+    "category": "Aldehyde"
+  },
+  "glyoxal": {
+    "smiles": "O=CC=O",
+    "name": "Glyoxal",
+    "category": "Aldehyde"
+  },
+  "acrolein": {
+    "smiles": "C=CC=O",
+    "name": "Acrolein",
+    "category": "Michael acceptor"
+  },
+  "propenal": {
+    "smiles": "C=CC=O",
+    "name": "Acrolein",
+    "category": "Michael acceptor"
+  },
+  "methyl vinyl ketone": {
+    "smiles": "CC(=O)C=C",
+    "name": "Methyl vinyl ketone",
+    "category": "Michael acceptor"
+  },
+  "vanillin": {
+    "smiles": "COc1cc(C=O)ccc1O",
+    "name": "Vanillin",
+    "category": "Aldehyde / phenol"
+  },
+  "benzoquinone": {
+    "smiles": "O=C1C=CC(=O)C=C1",
+    "name": "1,4-Benzoquinone",
+    "category": "Quinone"
+  },
+  "1 4-benzoquinone": {
+    "smiles": "O=C1C=CC(=O)C=C1",
+    "name": "1,4-Benzoquinone",
+    "category": "Quinone"
+  },
+  "p-benzoquinone": {
+    "smiles": "O=C1C=CC(=O)C=C1",
+    "name": "1,4-Benzoquinone",
+    "category": "Quinone"
+  },
+  "glucose": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose (pyranose)",
+    "category": "Reducing sugar"
+  },
+  "dextrose": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose (pyranose)",
+    "category": "Reducing sugar"
+  },
+  "d-glucose": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose (pyranose)",
+    "category": "Reducing sugar"
+  },
+  "fructose": {
+    "smiles": "OCC1(O)OCC(O)C(O)C1O",
+    "name": "Fructose (pyranose)",
+    "category": "Reducing sugar"
+  },
+  "levulose": {
+    "smiles": "OCC1(O)OCC(O)C(O)C1O",
+    "name": "Fructose (pyranose)",
+    "category": "Reducing sugar"
+  },
+  "galactose": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Galactose (pyranose)",
+    "category": "Reducing sugar"
+  },
+  "lactose": {
+    "smiles": "OCC1OC(OC2C(CO)OC(O)C(O)C2O)C(O)C(O)C1O",
+    "name": "Lactose",
+    "category": "Reducing disaccharide"
+  },
+  "maltose": {
+    "smiles": "OCC1OC(OC2C(CO)OC(O)C(O)C2O)C(O)C(O)C1O",
+    "name": "Maltose",
+    "category": "Reducing disaccharide"
+  },
+  "sucrose": {
+    "smiles": "OCC1OC(OC2(CO)OC(CO)C(O)C2O)C(O)C(O)C1O",
+    "name": "Sucrose",
+    "category": "Non-reducing disaccharide"
+  },
+  "table sugar": {
+    "smiles": "OCC1OC(OC2(CO)OC(CO)C(O)C2O)C(O)C(O)C1O",
+    "name": "Sucrose",
+    "category": "Non-reducing disaccharide"
+  },
+  "mannitol": {
+    "smiles": "OCC(O)C(O)C(O)C(O)CO",
+    "name": "Mannitol",
+    "category": "Polyol"
+  },
+  "sorbitol": {
+    "smiles": "OCC(O)C(O)C(O)C(O)CO",
+    "name": "Sorbitol",
+    "category": "Polyol"
+  },
+  "xylitol": {
+    "smiles": "OCC(O)C(O)C(O)CO",
+    "name": "Xylitol",
+    "category": "Polyol"
+  },
+  "cellulose": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose repeat unit (cellulose / starch model)",
+    "category": "Carbohydrate"
+  },
+  "microcrystalline cellulose": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose repeat unit (cellulose / starch model)",
+    "category": "Carbohydrate"
+  },
+  "mcc": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose repeat unit (cellulose / starch model)",
+    "category": "Carbohydrate"
+  },
+  "starch": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose repeat unit (cellulose / starch model)",
+    "category": "Carbohydrate"
+  },
+  "corn starch": {
+    "smiles": "OCC1OC(O)C(O)C(O)C1O",
+    "name": "Glucose repeat unit (cellulose / starch model)",
+    "category": "Carbohydrate"
+  },
+  "ammonia": {
+    "smiles": "[NH4+].[OH-]",
+    "name": "Ammonium hydroxide",
+    "category": "Base"
+  },
+  "methylamine": {
+    "smiles": "CN",
+    "name": "Methylamine",
+    "category": "Amine"
+  },
+  "dimethylamine": {
+    "smiles": "CNC",
+    "name": "Dimethylamine",
+    "category": "Amine"
+  },
+  "trimethylamine": {
+    "smiles": "CN(C)C",
+    "name": "Trimethylamine",
+    "category": "Amine"
+  },
+  "ethylamine": {
+    "smiles": "CCN",
+    "name": "Ethylamine",
+    "category": "Amine"
+  },
+  "diethylamine": {
+    "smiles": "CCNCC",
+    "name": "Diethylamine",
+    "category": "Amine"
+  },
+  "triethylamine": {
+    "smiles": "CCN(CC)CC",
+    "name": "Triethylamine",
+    "category": "Amine"
+  },
+  "tea": {
+    "smiles": "CCN(CC)CC",
+    "name": "Triethylamine",
+    "category": "Amine"
+  },
+  "et3n": {
+    "smiles": "CCN(CC)CC",
+    "name": "Triethylamine",
+    "category": "Amine"
+  },
+  "diisopropylethylamine": {
+    "smiles": "CCN(C(C)C)C(C)C",
+    "name": "N,N-Diisopropylethylamine",
+    "category": "Amine"
+  },
+  "dipea": {
+    "smiles": "CCN(C(C)C)C(C)C",
+    "name": "N,N-Diisopropylethylamine",
+    "category": "Amine"
+  },
+  "hunig's base": {
+    "smiles": "CCN(C(C)C)C(C)C",
+    "name": "N,N-Diisopropylethylamine",
+    "category": "Amine"
+  },
+  "ethylenediamine": {
+    "smiles": "NCCN",
+    "name": "Ethylenediamine",
+    "category": "Amine"
+  },
+  "ethanolamine": {
+    "smiles": "NCCO",
+    "name": "Ethanolamine",
+    "category": "Amino alcohol"
+  },
+  "2-aminoethanol": {
+    "smiles": "NCCO",
+    "name": "Ethanolamine",
+    "category": "Amino alcohol"
+  },
+  "diethanolamine": {
+    "smiles": "OCCNCCO",
+    "name": "Diethanolamine",
+    "category": "Amino alcohol"
+  },
+  "triethanolamine": {
+    "smiles": "OCCN(CCO)CCO",
+    "name": "Triethanolamine",
+    "category": "Amino alcohol"
+  },
+  "tris": {
+    "smiles": "NC(CO)(CO)CO",
+    "name": "Tris(hydroxymethyl)aminomethane",
+    "category": "Amino alcohol"
+  },
+  "tromethamine": {
+    "smiles": "NC(CO)(CO)CO",
+    "name": "Tris(hydroxymethyl)aminomethane",
+    "category": "Amino alcohol"
+  },
+  "tris(hydroxymethyl)aminomethane": {
+    "smiles": "NC(CO)(CO)CO",
+    "name": "Tris(hydroxymethyl)aminomethane",
+    "category": "Amino alcohol"
+  },
+  "meglumine": {
+    "smiles": "CNCC(O)C(O)C(O)C(O)CO",
+    "name": "N-Methylglucamine (meglumine)",
+    "category": "Amino polyol"
+  },
+  "piperidine": {
+    "smiles": "C1CCNCC1",
+    "name": "Piperidine",
+    "category": "Amine"
+  },
+  "morpholine": {
+    "smiles": "C1COCCN1",
+    "name": "Morpholine",
+    "category": "Amine"
+  },
+  "piperazine": {
+    "smiles": "C1CNCCN1",
+    "name": "Piperazine",
+    "category": "Amine"
+  },
+  "pyrrolidine": {
+    "smiles": "C1CCNC1",
+    "name": "Pyrrolidine",
+    "category": "Amine"
+  },
+  "dbu": {
+    "smiles": "C1CCC2=NCCCN2CC1",
+    "name": "DBU",
+    "category": "Amidine base"
+  },
+  "1 8-diazabicyclo[5.4.0]undec-7-ene": {
+    "smiles": "C1CCC2=NCCCN2CC1",
+    "name": "DBU",
+    "category": "Amidine base"
+  },
+  "benzylamine": {
+    "smiles": "NCc1ccccc1",
+    "name": "Benzylamine",
+    "category": "Amine"
+  },
+  "aniline": {
+    "smiles": "Nc1ccccc1",
+    "name": "Aniline",
+    "category": "Aromatic amine"
+  },
+  "aminobenzene": {
+    "smiles": "Nc1ccccc1",
+    "name": "Aniline",
+    "category": "Aromatic amine"
+  },
+  "n-methylaniline": {
+    "smiles": "CNc1ccccc1",
+    "name": "N-Methylaniline",
+    "category": "Aromatic amine"
+  },
+  "n n-dimethylaniline": {
+    "smiles": "CN(C)c1ccccc1",
+    "name": "N,N-Dimethylaniline",
+    "category": "Aromatic amine"
+  },
+  "4-aminophenol": {
+    "smiles": "Nc1ccc(O)cc1",
+    "name": "4-Aminophenol",
+    "category": "Aromatic amine / phenol"
+  },
+  "p-aminophenol": {
+    "smiles": "Nc1ccc(O)cc1",
+    "name": "4-Aminophenol",
+    "category": "Aromatic amine / phenol"
+  },
+  "4-nitroaniline": {
+    "smiles": "Nc1ccc(cc1)[N+]([O-])=O",
+    "name": "4-Nitroaniline",
+    "category": "Aromatic amine"
+  },
+  "p-nitroaniline": {
+    "smiles": "Nc1ccc(cc1)[N+]([O-])=O",
+    "name": "4-Nitroaniline",
+    "category": "Aromatic amine"
+  },
+  "guanidine": {
+    "smiles": "NC(N)=N",
+    "name": "Guanidine",
+    "category": "Guanidine"
+  },
+  "hydrazine": {
+    "smiles": "NN",
+    "name": "Hydrazine",
+    "category": "Hydrazine"
+  },
+  "phenylhydrazine": {
+    "smiles": "NNc1ccccc1",
+    "name": "Phenylhydrazine",
+    "category": "Hydrazine"
+  },
+  "hydroxylamine": {
+    "smiles": "NO",
+    "name": "Hydroxylamine",
+    "category": "Hydroxylamine"
+  },
+  "acetone oxime": {
+    "smiles": "CC(C)=NO",
+    "name": "Acetone oxime",
+    "category": "Oxime"
+  },
+  "benzaldehyde oxime": {
+    "smiles": "ON=Cc1ccccc1",
+    "name": "Benzaldehyde oxime",
+    "category": "Oxime"
+  },
+  "n-nitrosodimethylamine": {
+    "smiles": "CN(C)N=O",
+    "name": "N-Nitrosodimethylamine",
+    "category": "N-Nitrosamine"
+  },
+  "ndma": {
+    "smiles": "CN(C)N=O",
+    "name": "N-Nitrosodimethylamine",
+    "category": "N-Nitrosamine"
+  },
+  "n-nitrosodiethylamine": {
+    "smiles": "CCN(CC)N=O",
+    "name": "N-Nitrosodiethylamine",
+    "category": "N-Nitrosamine"
+  },
+  "ndea": {
+    "smiles": "CCN(CC)N=O",
+    "name": "N-Nitrosodiethylamine",
+    "category": "N-Nitrosamine"
+  },
+  "azobenzene": {
+    "smiles": "c1ccc(cc1)N=Nc1ccccc1",
+    "name": "Azobenzene",
+    "category": "Azo"
+  },
+  "phenyl azide": {
+    "smiles": "[N-]=[N+]=Nc1ccccc1",
+    "name": "Phenyl azide",
+    "category": "Azide"
+  },
+  "methyl isocyanate": {
+    "smiles": "CN=C=O",
+    "name": "Methyl isocyanate",
+    "category": "Isocyanate"
+  },
+  "phenyl isothiocyanate": {
+    "smiles": "S=C=Nc1ccccc1",
+    "name": "Phenyl isothiocyanate",
+    "category": "Isothiocyanate"
+  },
+  "glycine": {
+    "smiles": "NCC(O)=O",
+    "name": "Glycine",
+    "category": "Amino acid"
+  },
+  "alanine": {
+    "smiles": "CC(N)C(O)=O",
+    "name": "Alanine",
+    "category": "Amino acid"
+  },
+  "lysine": {
+    "smiles": "NCCCCC(N)C(O)=O",
+    "name": "Lysine",
+    "category": "Amino acid"
+  },
+  "glutamic acid": {
+    "smiles": "NC(CCC(O)=O)C(O)=O",
+    "name": "Glutamic acid",
+    "category": "Amino acid"
+  },
+  "cysteine": {
+    "smiles": "NC(CS)C(O)=O",
+    "name": "Cysteine",
+    "category": "Amino acid"
+  },
+  "methionine": {
+    "smiles": "CSCCC(N)C(O)=O",
+    "name": "Methionine",
+    "category": "Amino acid"
+  },
+  "phenylalanine": {
+    "smiles": "NC(Cc1ccccc1)C(O)=O",
+    "name": "Phenylalanine",
+    "category": "Amino acid"
+  },
+  "tyrosine": {
+    "smiles": "NC(Cc1ccc(O)cc1)C(O)=O",
+    "name": "Tyrosine",
+    "category": "Amino acid"
+  },
+  "tryptophan": {
+    "smiles": "NC(Cc1c[nH]c2ccccc12)C(O)=O",
+    "name": "Tryptophan",
+    "category": "Amino acid"
+  },
+  "proline": {
+    "smiles": "OC(=O)C1CCCN1",
+    "name": "Proline",
+    "category": "Amino acid"
+  },
+  "cetyltrimethylammonium bromide": {
+    "smiles": "CCCCCCCCCCCCCCCC[N+](C)(C)C.[Br-]",
+    "name": "Cetyltrimethylammonium bromide",
+    "category": "Quaternary ammonium"
+  },
+  "ctab": {
+    "smiles": "CCCCCCCCCCCCCCCC[N+](C)(C)C.[Br-]",
+    "name": "Cetyltrimethylammonium bromide",
+    "category": "Quaternary ammonium"
+  },
+  "benzalkonium chloride": {
+    "smiles": "CCCCCCCCCCCC[N+](C)(C)Cc1ccccc1.[Cl-]",
+    "name": "Benzalkonium chloride (C12)",
+    "category": "Quaternary ammonium"
+  },
+  "tetramethylammonium hydroxide": {
+    "smiles": "C[N+](C)(C)C.[OH-]",
+    "name": "Tetramethylammonium hydroxide",
+    "category": "Strong base"
+  },
+  "tmah": {
+    "smiles": "C[N+](C)(C)C.[OH-]",
+    "name": "Tetramethylammonium hydroxide",
+    "category": "Strong base"
+  },
+  "phenol": {
+    "smiles": "Oc1ccccc1",
+    "name": "Phenol",
+    "category": "Phenol"
+  },
+  "hydroxybenzene": {
+    "smiles": "Oc1ccccc1",
+    "name": "Phenol",
+    "category": "Phenol"
+  },
+  "catechol": {
+    "smiles": "Oc1ccccc1O",
+    "name": "Catechol",
+    "category": "Phenol"
+  },
+  "1 2-dihydroxybenzene": {
+    "smiles": "Oc1ccccc1O",
+    "name": "Catechol",
+    "category": "Phenol"
+  },
+  "resorcinol": {
+    "smiles": "Oc1cccc(O)c1",
+    "name": "Resorcinol",
+    "category": "Phenol"
+  },
+  "hydroquinone": {
+    "smiles": "Oc1ccc(O)cc1",
+    "name": "Hydroquinone",
+    "category": "Phenol"
+  },
+  "1 4-dihydroxybenzene": {
+    "smiles": "Oc1ccc(O)cc1",
+    "name": "Hydroquinone",
+    "category": "Phenol"
+  },
+  "p-cresol": {
+    "smiles": "Cc1ccc(O)cc1",
+    "name": "p-Cresol",
+    "category": "Phenol"
+  },
+  "4-methylphenol": {
+    "smiles": "Cc1ccc(O)cc1",
+    "name": "p-Cresol",
+    "category": "Phenol"
+  },
+  "butylated hydroxytoluene": {
+    "smiles": "Cc1cc(c(O)c(c1)C(C)(C)C)C(C)(C)C",
+    "name": "Butylated hydroxytoluene",
+    "category": "Hindered phenol"
+  },
+  "bht": {
+    "smiles": "Cc1cc(c(O)c(c1)C(C)(C)C)C(C)(C)C",
+    "name": "Butylated hydroxytoluene",
+    "category": "Hindered phenol"
+  },
+  "indole": {
+    "smiles": "c1ccc2[nH]ccc2c1",
+    "name": "Indole",
+    "category": "Heteroaromatic"
+  },
+  "pyridine": {
+    "smiles": "c1ccncc1",
+    "name": "Pyridine",
+    "category": "Heteroaromatic"
+  },
+  "pyrrole": {
+    "smiles": "c1cc[nH]c1",
+    "name": "Pyrrole",
+    "category": "Heteroaromatic"
+  },
+  "furan": {
+    "smiles": "c1ccoc1",
+    "name": "Furan",
+    "category": "Heteroaromatic"
+  },
+  "thiophene": {
+    "smiles": "c1ccsc1",
+    "name": "Thiophene",
+    "category": "Heteroaromatic"
+  },
+  "imidazole": {
+    "smiles": "c1c[nH]cn1",
+    "name": "Imidazole",
+    "category": "Heteroaromatic"
+  },
+  "caffeine": {
+    "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+    "name": "1,3,7-Trimethylxanthine",
+    "category": "Heteroaromatic"
+  },
+  "1 3 7-trimethylxanthine": {
+    "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+    "name": "1,3,7-Trimethylxanthine",
+    "category": "Heteroaromatic"
+  },
+  "benzyl chloride": {
+    "smiles": "ClCc1ccccc1",
+    "name": "Benzyl chloride",
+    "category": "Alkyl halide"
+  },
+  "chloroethane": {
+    "smiles": "CCCl",
+    "name": "Chloroethane",
+    "category": "Alkyl halide"
+  },
+  "ethyl chloride": {
+    "smiles": "CCCl",
+    "name": "Chloroethane",
+    "category": "Alkyl halide"
+  },
+  "1-bromobutane": {
+    "smiles": "CCCCBr",
+    "name": "1-Bromobutane",
+    "category": "Alkyl halide"
+  },
+  "butyl bromide": {
+    "smiles": "CCCCBr",
+    "name": "1-Bromobutane",
+    "category": "Alkyl halide"
+  },
+  "tert-butyl chloride": {
+    "smiles": "CC(C)(C)Cl",
+    "name": "tert-Butyl chloride",
+    "category": "Alkyl halide"
+  },
+  "allyl bromide": {
+    "smiles": "C=CCBr",
+    "name": "Allyl bromide",
+    "category": "Alkyl halide"
+  },
+  "iodomethane": {
+    "smiles": "CI",
+    "name": "Iodomethane",
+    "category": "Alkyl halide"
+  },
+  "methyl iodide": {
+    "smiles": "CI",
+    "name": "Iodomethane",
+    "category": "Alkyl halide"
+  },
+  "ethylene oxide": {
+    "smiles": "C1CO1",
+    "name": "Ethylene oxide",
+    "category": "Epoxide"
+  },
+  "oxirane": {
+    "smiles": "C1CO1",
+    "name": "Ethylene oxide",
+    "category": "Epoxide"
+  },
+  "propylene oxide": {
+    "smiles": "CC1CO1",
+    "name": "Propylene oxide",
+    "category": "Epoxide"
+  },
+  "methyloxirane": {
+    "smiles": "CC1CO1",
+    "name": "Propylene oxide",
+    "category": "Epoxide"
+  },
+  "epichlorohydrin": {
+    "smiles": "ClCC1CO1",
+    "name": "Epichlorohydrin",
+    "category": "Epoxide"
+  },
+  "methyl tosylate": {
+    "smiles": "COS(=O)(=O)c1ccc(C)cc1",
+    "name": "Methyl p-toluenesulfonate",
+    "category": "Sulfonate ester"
+  },
+  "dimethyl sulfate": {
+    "smiles": "COS(=O)(=O)OC",
+    "name": "Dimethyl sulfate",
+    "category": "Sulfate ester"
+  },
+  "methyl methanesulfonate": {
+    "smiles": "COS(C)(=O)=O",
+    "name": "Methyl methanesulfonate",
+    "category": "Sulfonate ester"
+  },
+  "mms": {
+    "smiles": "COS(C)(=O)=O",
+    "name": "Methyl methanesulfonate",
+    "category": "Sulfonate ester"
+  },
+  "ethyl methanesulfonate": {
+    "smiles": "CCOS(C)(=O)=O",
+    "name": "Ethyl methanesulfonate",
+    "category": "Sulfonate ester"
+  },
+  "ems": {
+    "smiles": "CCOS(C)(=O)=O",
+    "name": "Ethyl methanesulfonate",
+    "category": "Sulfonate ester"
+  },
+  "methanethiol": {
+    "smiles": "CS",
+    "name": "Methanethiol",
+    "category": "Thiol"
+  },
+  "methyl mercaptan": {
+    "smiles": "CS",
+    "name": "Methanethiol",
+    "category": "Thiol"
+  },
+  "ethanethiol": {
+    "smiles": "CCS",
+    "name": "Ethanethiol",
+    "category": "Thiol"
+  },
+  "thiophenol": {
+    "smiles": "Sc1ccccc1",
+    "name": "Thiophenol",
+    "category": "Thiol"
+  },
+  "dithiothreitol": {
+    "smiles": "OC(CS)C(O)CS",
+    "name": "Dithiothreitol",
+    "category": "Thiol"
+  },
+  "dtt": {
+    "smiles": "OC(CS)C(O)CS",
+    "name": "Dithiothreitol",
+    "category": "Thiol"
+  },
+  "dimethyl sulfide": {
+    "smiles": "CSC",
+    "name": "Dimethyl sulfide",
+    "category": "Thioether"
+  },
+  "dimethyl disulfide": {
+    "smiles": "CSSC",
+    "name": "Dimethyl disulfide",
+    "category": "Disulfide"
+  },
+  "diphenyl disulfide": {
+    "smiles": "c1ccc(cc1)SSc1ccccc1",
+    "name": "Diphenyl disulfide",
+    "category": "Disulfide"
+  },
+  "benzenesulfonamide": {
+    "smiles": "NS(=O)(=O)c1ccccc1",
+    "name": "Benzenesulfonamide",
+    "category": "Sulfonamide"
+  },
+  "p-toluenesulfonamide": {
+    "smiles": "Cc1ccc(cc1)S(N)(=O)=O",
+    "name": "p-Toluenesulfonamide",
+    "category": "Sulfonamide"
+  },
+  "tosylamide": {
+    "smiles": "Cc1ccc(cc1)S(N)(=O)=O",
+    "name": "p-Toluenesulfonamide",
+    "category": "Sulfonamide"
+  },
+  "methanesulfonic acid": {
+    "smiles": "CS(O)(=O)=O",
+    "name": "Methanesulfonic acid",
+    "category": "Sulfonic acid"
+  },
+  "msa": {
+    "smiles": "CS(O)(=O)=O",
+    "name": "Methanesulfonic acid",
+    "category": "Sulfonic acid"
+  },
+  "p-toluenesulfonic acid": {
+    "smiles": "Cc1ccc(cc1)S(O)(=O)=O",
+    "name": "p-Toluenesulfonic acid",
+    "category": "Sulfonic acid"
+  },
+  "tsoh": {
+    "smiles": "Cc1ccc(cc1)S(O)(=O)=O",
+    "name": "p-Toluenesulfonic acid",
+    "category": "Sulfonic acid"
+  },
+  "tosic acid": {
+    "smiles": "Cc1ccc(cc1)S(O)(=O)=O",
+    "name": "p-Toluenesulfonic acid",
+    "category": "Sulfonic acid"
+  },
+  "sodium lauryl sulfate": {
+    "smiles": "CCCCCCCCCCCCOS([O-])(=O)=O.[Na+]",
+    "name": "Sodium dodecyl sulfate",
+    "category": "Alkyl sulfate"
+  },
+  "sodium dodecyl sulfate": {
+    "smiles": "CCCCCCCCCCCCOS([O-])(=O)=O.[Na+]",
+    "name": "Sodium dodecyl sulfate",
+    "category": "Alkyl sulfate"
+  },
+  "sls": {
+    "smiles": "CCCCCCCCCCCCOS([O-])(=O)=O.[Na+]",
+    "name": "Sodium dodecyl sulfate",
+    "category": "Alkyl sulfate"
+  },
+  "sds": {
+    "smiles": "CCCCCCCCCCCCOS([O-])(=O)=O.[Na+]",
+    "name": "Sodium dodecyl sulfate",
+    "category": "Alkyl sulfate"
+  },
+  "triphenylphosphine": {
+    "smiles": "c1ccc(cc1)P(c1ccccc1)c1ccccc1",
+    "name": "Triphenylphosphine",
+    "category": "Phosphine"
+  },
+  "pph3": {
+    "smiles": "c1ccc(cc1)P(c1ccccc1)c1ccccc1",
+    "name": "Triphenylphosphine",
+    "category": "Phosphine"
+  },
+  "trimethyl phosphate": {
+    "smiles": "COP(=O)(OC)OC",
+    "name": "Trimethyl phosphate",
+    "category": "Phosphate ester"
+  },
+  "hydrochloric acid": {
+    "smiles": "Cl",
+    "name": "Hydrochloric acid",
+    "category": "Strong acid"
+  },
+  "hcl": {
+    "smiles": "Cl",
+    "name": "Hydrochloric acid",
+    "category": "Strong acid"
+  },
+  "hydrogen chloride": {
+    "smiles": "Cl",
+    "name": "Hydrochloric acid",
+    "category": "Strong acid"
+  },
+  "hydrobromic acid": {
+    "smiles": "Br",
+    "name": "Hydrobromic acid",
+    "category": "Strong acid"
+  },
+  "hbr": {
+    "smiles": "Br",
+    "name": "Hydrobromic acid",
+    "category": "Strong acid"
+  },
+  "sulfuric acid": {
+    "smiles": "OS(O)(=O)=O",
+    "name": "Sulfuric acid",
+    "category": "Strong acid"
+  },
+  "h2so4": {
+    "smiles": "OS(O)(=O)=O",
+    "name": "Sulfuric acid",
+    "category": "Strong acid"
+  },
+  "nitric acid": {
+    "smiles": "O[N+]([O-])=O",
+    "name": "Nitric acid",
+    "category": "Strong acid / oxidant"
+  },
+  "hno3": {
+    "smiles": "O[N+]([O-])=O",
+    "name": "Nitric acid",
+    "category": "Strong acid / oxidant"
+  },
+  "phosphoric acid": {
+    "smiles": "OP(O)(O)=O",
+    "name": "Phosphoric acid",
+    "category": "Acid"
+  },
+  "h3po4": {
+    "smiles": "OP(O)(O)=O",
+    "name": "Phosphoric acid",
+    "category": "Acid"
+  },
+  "sodium hydroxide": {
+    "smiles": "[Na+].[OH-]",
+    "name": "Sodium hydroxide",
+    "category": "Strong base"
+  },
+  "naoh": {
+    "smiles": "[Na+].[OH-]",
+    "name": "Sodium hydroxide",
+    "category": "Strong base"
+  },
+  "caustic soda": {
+    "smiles": "[Na+].[OH-]",
+    "name": "Sodium hydroxide",
+    "category": "Strong base"
+  },
+  "potassium hydroxide": {
+    "smiles": "[K+].[OH-]",
+    "name": "Potassium hydroxide",
+    "category": "Strong base"
+  },
+  "koh": {
+    "smiles": "[K+].[OH-]",
+    "name": "Potassium hydroxide",
+    "category": "Strong base"
+  },
+  "lithium hydroxide": {
+    "smiles": "[Li+].[OH-]",
+    "name": "Lithium hydroxide",
+    "category": "Strong base"
+  },
+  "lioh": {
+    "smiles": "[Li+].[OH-]",
+    "name": "Lithium hydroxide",
+    "category": "Strong base"
+  },
+  "calcium hydroxide": {
+    "smiles": "[Ca+2].[OH-].[OH-]",
+    "name": "Calcium hydroxide",
+    "category": "Base"
+  },
+  "slaked lime": {
+    "smiles": "[Ca+2].[OH-].[OH-]",
+    "name": "Calcium hydroxide",
+    "category": "Base"
+  },
+  "magnesium hydroxide": {
+    "smiles": "[Mg+2].[OH-].[OH-]",
+    "name": "Magnesium hydroxide",
+    "category": "Base"
+  },
+  "ammonium hydroxide": {
+    "smiles": "[NH4+].[OH-]",
+    "name": "Ammonium hydroxide",
+    "category": "Base"
+  },
+  "magnesium oxide": {
+    "smiles": "[Mg+2].[O-2]",
+    "name": "Magnesium oxide",
+    "category": "Metal oxide (basic)"
+  },
+  "magnesia": {
+    "smiles": "[Mg+2].[O-2]",
+    "name": "Magnesium oxide",
+    "category": "Metal oxide (basic)"
+  },
+  "mgo": {
+    "smiles": "[Mg+2].[O-2]",
+    "name": "Magnesium oxide",
+    "category": "Metal oxide (basic)"
+  },
+  "calcium oxide": {
+    "smiles": "[Ca+2].[O-2]",
+    "name": "Calcium oxide",
+    "category": "Metal oxide (basic)"
+  },
+  "quicklime": {
+    "smiles": "[Ca+2].[O-2]",
+    "name": "Calcium oxide",
+    "category": "Metal oxide (basic)"
+  },
+  "cao": {
+    "smiles": "[Ca+2].[O-2]",
+    "name": "Calcium oxide",
+    "category": "Metal oxide (basic)"
+  },
+  "zinc oxide": {
+    "smiles": "[Zn+2].[O-2]",
+    "name": "Zinc oxide",
+    "category": "Metal oxide"
+  },
+  "zno": {
+    "smiles": "[Zn+2].[O-2]",
+    "name": "Zinc oxide",
+    "category": "Metal oxide"
+  },
+  "silicon dioxide": {
+    "smiles": "O=[Si]=O",
+    "name": "Silicon dioxide",
+    "category": "Inert oxide"
+  },
+  "silica": {
+    "smiles": "O=[Si]=O",
+    "name": "Silicon dioxide",
+    "category": "Inert oxide"
+  },
+  "colloidal silicon dioxide": {
+    "smiles": "O=[Si]=O",
+    "name": "Silicon dioxide",
+    "category": "Inert oxide"
+  },
+  "sio2": {
+    "smiles": "O=[Si]=O",
+    "name": "Silicon dioxide",
+    "category": "Inert oxide"
+  },
+  "titanium dioxide": {
+    "smiles": "O=[Ti]=O",
+    "name": "Titanium dioxide",
+    "category": "Metal oxide (photocatalyst)"
+  },
+  "tio2": {
+    "smiles": "O=[Ti]=O",
+    "name": "Titanium dioxide",
+    "category": "Metal oxide (photocatalyst)"
+  },
+  "sodium bicarbonate": {
+    "smiles": "[Na+].OC([O-])=O",
+    "name": "Sodium bicarbonate",
+    "category": "Carbonate / base"
+  },
+  "sodium hydrogen carbonate": {
+    "smiles": "[Na+].OC([O-])=O",
+    "name": "Sodium bicarbonate",
+    "category": "Carbonate / base"
+  },
+  "baking soda": {
+    "smiles": "[Na+].OC([O-])=O",
+    "name": "Sodium bicarbonate",
+    "category": "Carbonate / base"
+  },
+  "sodium carbonate": {
+    "smiles": "[Na+].[Na+].[O-]C([O-])=O",
+    "name": "Sodium carbonate",
+    "category": "Carbonate / base"
+  },
+  "soda ash": {
+    "smiles": "[Na+].[Na+].[O-]C([O-])=O",
+    "name": "Sodium carbonate",
+    "category": "Carbonate / base"
+  },
+  "potassium carbonate": {
+    "smiles": "[K+].[K+].[O-]C([O-])=O",
+    "name": "Potassium carbonate",
+    "category": "Carbonate / base"
+  },
+  "calcium carbonate": {
+    "smiles": "[Ca+2].[O-]C([O-])=O",
+    "name": "Calcium carbonate",
+    "category": "Carbonate / base"
+  },
+  "chalk": {
+    "smiles": "[Ca+2].[O-]C([O-])=O",
+    "name": "Calcium carbonate",
+    "category": "Carbonate / base"
+  },
+  "magnesium carbonate": {
+    "smiles": "[Mg+2].[O-]C([O-])=O",
+    "name": "Magnesium carbonate",
+    "category": "Carbonate / base"
+  },
+  "sodium methoxide": {
+    "smiles": "C[O-].[Na+]",
+    "name": "Sodium methoxide",
+    "category": "Strong base"
+  },
+  "sodium ethoxide": {
+    "smiles": "CC[O-].[Na+]",
+    "name": "Sodium ethoxide",
+    "category": "Strong base"
+  },
+  "potassium tert-butoxide": {
+    "smiles": "CC(C)(C)[O-].[K+]",
+    "name": "Potassium tert-butoxide",
+    "category": "Strong base"
+  },
+  "kotbu": {
+    "smiles": "CC(C)(C)[O-].[K+]",
+    "name": "Potassium tert-butoxide",
+    "category": "Strong base"
+  },
+  "sodium chloride": {
+    "smiles": "[Na+].[Cl-]",
+    "name": "Sodium chloride",
+    "category": "Salt"
+  },
+  "nacl": {
+    "smiles": "[Na+].[Cl-]",
+    "name": "Sodium chloride",
+    "category": "Salt"
+  },
+  "salt": {
+    "smiles": "[Na+].[Cl-]",
+    "name": "Sodium chloride",
+    "category": "Salt"
+  },
+  "potassium chloride": {
+    "smiles": "[K+].[Cl-]",
+    "name": "Potassium chloride",
+    "category": "Salt"
+  },
+  "kcl": {
+    "smiles": "[K+].[Cl-]",
+    "name": "Potassium chloride",
+    "category": "Salt"
+  },
+  "magnesium chloride": {
+    "smiles": "[Mg+2].[Cl-].[Cl-]",
+    "name": "Magnesium chloride",
+    "category": "Salt"
+  },
+  "calcium chloride": {
+    "smiles": "[Ca+2].[Cl-].[Cl-]",
+    "name": "Calcium chloride",
+    "category": "Salt"
+  },
+  "zinc chloride": {
+    "smiles": "[Zn+2].[Cl-].[Cl-]",
+    "name": "Zinc chloride",
+    "category": "Lewis acid"
+  },
+  "aluminium chloride": {
+    "smiles": "[Al+3].[Cl-].[Cl-].[Cl-]",
+    "name": "Aluminium chloride",
+    "category": "Lewis acid"
+  },
+  "aluminum chloride": {
+    "smiles": "[Al+3].[Cl-].[Cl-].[Cl-]",
+    "name": "Aluminium chloride",
+    "category": "Lewis acid"
+  },
+  "alcl3": {
+    "smiles": "[Al+3].[Cl-].[Cl-].[Cl-]",
+    "name": "Aluminium chloride",
+    "category": "Lewis acid"
+  },
+  "iron(iii) chloride": {
+    "smiles": "[Fe+3].[Cl-].[Cl-].[Cl-]",
+    "name": "Iron(III) chloride",
+    "category": "Lewis acid / oxidant"
+  },
+  "ferric chloride": {
+    "smiles": "[Fe+3].[Cl-].[Cl-].[Cl-]",
+    "name": "Iron(III) chloride",
+    "category": "Lewis acid / oxidant"
+  },
+  "fecl3": {
+    "smiles": "[Fe+3].[Cl-].[Cl-].[Cl-]",
+    "name": "Iron(III) chloride",
+    "category": "Lewis acid / oxidant"
+  },
+  "iron(ii) sulfate": {
+    "smiles": "[Fe+2].[O-]S([O-])(=O)=O",
+    "name": "Iron(II) sulfate",
+    "category": "Transition metal salt"
+  },
+  "ferrous sulfate": {
+    "smiles": "[Fe+2].[O-]S([O-])(=O)=O",
+    "name": "Iron(II) sulfate",
+    "category": "Transition metal salt"
+  },
+  "feso4": {
+    "smiles": "[Fe+2].[O-]S([O-])(=O)=O",
+    "name": "Iron(II) sulfate",
+    "category": "Transition metal salt"
+  },
+  "copper(ii) sulfate": {
+    "smiles": "[Cu+2].[O-]S([O-])(=O)=O",
+    "name": "Copper(II) sulfate",
+    "category": "Transition metal salt"
+  },
+  "cupric sulfate": {
+    "smiles": "[Cu+2].[O-]S([O-])(=O)=O",
+    "name": "Copper(II) sulfate",
+    "category": "Transition metal salt"
+  },
+  "cuso4": {
+    "smiles": "[Cu+2].[O-]S([O-])(=O)=O",
+    "name": "Copper(II) sulfate",
+    "category": "Transition metal salt"
+  },
+  "sodium sulfate": {
+    "smiles": "[Na+].[Na+].[O-]S([O-])(=O)=O",
+    "name": "Sodium sulfate",
+    "category": "Salt"
+  },
+  "magnesium sulfate": {
+    "smiles": "[Mg+2].[O-]S([O-])(=O)=O",
+    "name": "Magnesium sulfate",
+    "category": "Salt"
+  },
+  "mgso4": {
+    "smiles": "[Mg+2].[O-]S([O-])(=O)=O",
+    "name": "Magnesium sulfate",
+    "category": "Salt"
+  },
+  "calcium sulfate": {
+    "smiles": "[Ca+2].[O-]S([O-])(=O)=O",
+    "name": "Calcium sulfate",
+    "category": "Salt"
+  },
+  "gypsum": {
+    "smiles": "[Ca+2].[O-]S([O-])(=O)=O",
+    "name": "Calcium sulfate",
+    "category": "Salt"
+  },
+  "sodium phosphate": {
+    "smiles": "[Na+].[Na+].OP([O-])([O-])=O",
+    "name": "Disodium hydrogen phosphate",
+    "category": "Phosphate salt"
+  },
+  "disodium hydrogen phosphate": {
+    "smiles": "[Na+].[Na+].OP([O-])([O-])=O",
+    "name": "Disodium hydrogen phosphate",
+    "category": "Phosphate salt"
+  },
+  "calcium phosphate": {
+    "smiles": "[Ca+2].OP([O-])([O-])=O",
+    "name": "Calcium hydrogen phosphate",
+    "category": "Phosphate salt"
+  },
+  "dibasic calcium phosphate": {
+    "smiles": "[Ca+2].OP([O-])([O-])=O",
+    "name": "Calcium hydrogen phosphate",
+    "category": "Phosphate salt"
+  },
+  "calcium hydrogen phosphate": {
+    "smiles": "[Ca+2].OP([O-])([O-])=O",
+    "name": "Calcium hydrogen phosphate",
+    "category": "Phosphate salt"
+  },
+  "ammonium chloride": {
+    "smiles": "[NH4+].[Cl-]",
+    "name": "Ammonium chloride",
+    "category": "Salt"
+  },
+  "potassium iodide": {
+    "smiles": "[K+].[I-]",
+    "name": "Potassium iodide",
+    "category": "Halide salt"
+  },
+  "ki": {
+    "smiles": "[K+].[I-]",
+    "name": "Potassium iodide",
+    "category": "Halide salt"
+  },
+  "sodium bromide": {
+    "smiles": "[Na+].[Br-]",
+    "name": "Sodium bromide",
+    "category": "Halide salt"
+  },
+  "sodium fluoride": {
+    "smiles": "[Na+].[F-]",
+    "name": "Sodium fluoride",
+    "category": "Halide salt"
+  },
+  "sodium azide": {
+    "smiles": "[Na+].[N-]=[N+]=[N-]",
+    "name": "Sodium azide",
+    "category": "Azide"
+  },
+  "hydrogen peroxide": {
+    "smiles": "OO",
+    "name": "Hydrogen peroxide",
+    "category": "Oxidant"
+  },
+  "h2o2": {
+    "smiles": "OO",
+    "name": "Hydrogen peroxide",
+    "category": "Oxidant"
+  },
+  "tert-butyl hydroperoxide": {
+    "smiles": "CC(C)(C)OO",
+    "name": "tert-Butyl hydroperoxide",
+    "category": "Oxidant"
+  },
+  "tbhp": {
+    "smiles": "CC(C)(C)OO",
+    "name": "tert-Butyl hydroperoxide",
+    "category": "Oxidant"
+  },
+  "cumene hydroperoxide": {
+    "smiles": "CC(C)(OO)c1ccccc1",
+    "name": "Cumene hydroperoxide",
+    "category": "Oxidant"
+  },
+  "peracetic acid": {
+    "smiles": "CC(=O)OO",
+    "name": "Peracetic acid",
+    "category": "Oxidant"
+  },
+  "m-chloroperbenzoic acid": {
+    "smiles": "OOC(=O)c1cccc(Cl)c1",
+    "name": "m-Chloroperbenzoic acid",
+    "category": "Oxidant"
+  },
+  "mcpba": {
+    "smiles": "OOC(=O)c1cccc(Cl)c1",
+    "name": "m-Chloroperbenzoic acid",
+    "category": "Oxidant"
+  },
+  "sodium hypochlorite": {
+    "smiles": "[Na+].[O-]Cl",
+    "name": "Sodium hypochlorite",
+    "category": "Oxidant"
+  },
+  "bleach": {
+    "smiles": "[Na+].[O-]Cl",
+    "name": "Sodium hypochlorite",
+    "category": "Oxidant"
+  },
+  "potassium permanganate": {
+    "smiles": "[K+].[O-][Mn](=O)(=O)=O",
+    "name": "Potassium permanganate",
+    "category": "Oxidant"
+  },
+  "oxygen": {
+    "smiles": "O=O",
+    "name": "Molecular oxygen",
+    "category": "Oxidant"
+  },
+  "dioxygen": {
+    "smiles": "O=O",
+    "name": "Molecular oxygen",
+    "category": "Oxidant"
+  },
+  "o2": {
+    "smiles": "O=O",
+    "name": "Molecular oxygen",
+    "category": "Oxidant"
+  },
+  "ozone": {
+    "smiles": "[O-][O+]=O",
+    "name": "Ozone",
+    "category": "Oxidant"
+  },
+  "o3": {
+    "smiles": "[O-][O+]=O",
+    "name": "Ozone",
+    "category": "Oxidant"
+  },
+  "sodium nitrite": {
+    "smiles": "[Na+].[O-]N=O",
+    "name": "Sodium nitrite",
+    "category": "Nitrosating agent"
+  },
+  "nano2": {
+    "smiles": "[Na+].[O-]N=O",
+    "name": "Sodium nitrite",
+    "category": "Nitrosating agent"
+  },
+  "sodium nitrate": {
+    "smiles": "[Na+].[O-][N+]([O-])=O",
+    "name": "Sodium nitrate",
+    "category": "Nitrate salt"
+  },
+  "sodium borohydride": {
+    "smiles": "[Na+].[BH4-]",
+    "name": "Sodium borohydride",
+    "category": "Hydride reductant"
+  },
+  "nabh4": {
+    "smiles": "[Na+].[BH4-]",
+    "name": "Sodium borohydride",
+    "category": "Hydride reductant"
+  },
+  "sodium bisulfite": {
+    "smiles": "[Na+].OS([O-])=O",
+    "name": "Sodium bisulfite",
+    "category": "Reductant"
+  },
+  "sodium hydrogen sulfite": {
+    "smiles": "[Na+].OS([O-])=O",
+    "name": "Sodium bisulfite",
+    "category": "Reductant"
+  },
+  "sodium sulfite": {
+    "smiles": "[Na+].[Na+].[O-]S([O-])=O",
+    "name": "Sodium sulfite",
+    "category": "Reductant"
+  },
+  "sodium metabisulfite": {
+    "smiles": "[Na+].[Na+].[O-]S(=O)OS([O-])(=O)=O",
+    "name": "Sodium metabisulfite",
+    "category": "Reductant"
+  }
+}
