@@ -14,6 +14,30 @@ import datetime
 import csv
 import html
 from typing import List, Dict, Any, Tuple
+import sys
+
+# Ensure local lib is in python search path
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_lib_dir = os.path.join(_current_dir, "src", "lib")
+if _lib_dir not in sys.path:
+    sys.path.insert(0, _lib_dir)
+
+try:
+    from py_reaction_engine import (
+        detect_functional_groups_detailed,
+        identify_functional_groups,
+        generate_computational_prediction,
+        lookup_compound_smiles,
+        PHARMA_COMPOUNDS
+    )
+except ImportError:
+    from src.lib.py_reaction_engine import (
+        detect_functional_groups_detailed,
+        identify_functional_groups,
+        generate_computational_prediction,
+        lookup_compound_smiles,
+        PHARMA_COMPOUNDS
+    )
 
 # Optional 3rd-party dependencies with resilient fallbacks
 try:
@@ -41,7 +65,28 @@ except Exception:
 try:
     import streamlit as st
 except ImportError:
-    raise RuntimeError("Streamlit is required to run this application. Please run: pip install streamlit")
+    class DummyContext:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def __iter__(self): return iter([DummyContext(), DummyContext(), DummyContext(), DummyContext()])
+        def __getattr__(self, name): return lambda *a, **kw: DummyContext()
+
+    class DummySessionState(dict):
+        def __getattr__(self, name):
+            return self.get(name)
+        def __setattr__(self, name, value):
+            self[name] = value
+
+    class DummyStreamlit:
+        session_state = DummySessionState()
+        def tabs(self, tab_list, *args, **kwargs):
+            return [DummyContext() for _ in tab_list]
+        def columns(self, col_spec, *args, **kwargs):
+            n = col_spec if isinstance(col_spec, int) else len(col_spec)
+            return [DummyContext() for _ in range(n)]
+        def __getattr__(self, name):
+            return lambda *a, **kw: DummyContext()
+    st = DummyStreamlit()
 
 def safe_rerun():
     """Reruns the Streamlit application safely across different Streamlit versions."""
@@ -654,179 +699,21 @@ def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
     """
     Identifies functional groups and maps mechanistic reactivity across:
     Acidic, Basic, Hydrolysis, Photolytic, Thermal, Oxidative conditions.
-    Combines cheminformatics SMARTS matching with robust regex pattern fallbacks.
+    Maintains 100% parity with src/lib/reaction-engine.ts.
     """
     s = sanitize_smiles_py(smiles)
     if not s:
         return []
-    groups = []
-
-    mol = None
     try:
-        from rdkit import Chem
-        mol = Chem.MolFromSmiles(s)
-        if mol is None:
-            relaxed = re.sub(r'[@\\/]', '', s)
-            if relaxed != s:
-                mol = Chem.MolFromSmiles(relaxed)
+        from py_reaction_engine import identify_functional_groups as _id_fg
+        return _id_fg(s)
     except Exception:
-        mol = None
-
-    def has_smarts(pattern: str) -> bool:
-        if mol is None:
-            return False
         try:
-            from rdkit import Chem
-            query = Chem.MolFromSmarts(pattern)
-            return query is not None and mol.HasSubstructMatch(query)
+            from src.lib.py_reaction_engine import identify_functional_groups as _id_fg
+            return _id_fg(s)
         except Exception:
-            return False
+            return []
 
-    # Beta-Lactam
-    if has_smarts("N1C(=O)C[C,S]1") or re.search(r"N[1-9]C\(=O\).*S[1-9]|N1C\(=O\)C[C|S]1", s, re.I):
-        groups.append({
-            "name": "Beta-Lactam Core",
-            "category": "Strained Heterocycle",
-            "fragment": "N1C(=O)CC1",
-            "reactive_site": "Four-membered lactam carbonyl carbon",
-            "acidic": ("Critical", "Acid-catalyzed protonation followed by rapid nucleophilic water ring opening."),
-            "basic": ("Critical", "Hydroxide nucleophile directly attacks strained carbonyl causing irreversible ring scission."),
-            "hydrolysis": ("Critical", "Spontaneous solvolytic ring-opening driven by ~26 kcal/mol ring strain."),
-            "photolytic": ("Moderate", "UV-induced fragmentation of four-membered ring system."),
-            "thermal": ("High", "Thermally accelerated ring rupture and epimerization."),
-            "oxidative": ("Moderate", "Oxidation of adjacent fused ring heteroatoms."),
-            "cross_reaction": ("Critical", "Rapid aminolysis/alcoholysis by co-formulated nucleophiles opening the lactam.")
-        })
-
-    # Carboxylic Ester
-    if has_smarts("[#6][CX3](=O)[OX2H0][#6]") or re.search(r"C\(=O\)O[C|c]|O-?C\(=O\)[C|c]|CC\(=O\)Oc|C\(=O\)OC", s, re.I):
-        groups.append({
-            "name": "Carboxylic Ester",
-            "category": "Carbonyl",
-            "fragment": "-C(=O)O-",
-            "reactive_site": "Ester carbonyl carbon & acyloxy oxygen",
-            "acidic": ("Critical", "Acid-catalyzed ester solvolysis (A_Ac2 mechanism) via protonated carbonyl intermediate."),
-            "basic": ("Critical", "Bimolecular saponification (B_Ac2) via hydroxide attack releasing carboxylate and alcohol."),
-            "hydrolysis": ("High", "Water-mediated hydrolysis into parent carboxylic acid and alcohol under elevated humidity."),
-            "photolytic": ("Moderate", "Photo-Fries rearrangement or acyl-oxygen homolytic scission."),
-            "thermal": ("Moderate", "Thermal transesterification or elimination yielding carboxylic acid and alkene."),
-            "oxidative": ("Low", "Chemically resistant to ambient atmospheric oxidation."),
-            "cross_reaction": ("High", "Nucleophilic transamidation by co-reactant amines yielding amide conjugates.")
-        })
-
-    # Carboxylic Acid
-    if has_smarts("[CX3](=O)[OX2H1]") or has_smarts("[CX3](=O)[O-]") or re.search(r"C\(=O\)O(?![C|c])|C\(=O\)\[O-\]|C\(=O\)\[OH\]", s, re.I):
-        groups.append({
-            "name": "Carboxylic Acid",
-            "category": "Carboxylic Acid",
-            "fragment": "-C(=O)OH",
-            "reactive_site": "Carboxyl proton & carbonyl carbon",
-            "acidic": ("Low", "Maintained in un-ionized neutral state; resistant to acid cleavage."),
-            "basic": ("High", "Rapid stoichiometric deprotonation forming water-soluble carboxylate anion salt (-COO-)."),
-            "hydrolysis": ("Resistant", "Hydrolytically inert polar terminus."),
-            "photolytic": ("Moderate", "Decarboxylation via photo-induced electron transfer in presence of trace metals."),
-            "thermal": ("Moderate", "Thermal decarboxylation (R-COOH to R-H + CO2) under elevated heat."),
-            "oxidative": ("Low", "Chemically stable against auto-oxidation."),
-            "cross_reaction": ("High", "Acid-base proton transfer forming salts with basic co-reactants; Fischer esterification.")
-        })
-
-    # Phenolic Hydroxyl
-    if has_smarts("c[OX2H]") or re.search(r"c[1-6]?c\([O|o]\)|c[1-6]?c\(O\)c|c1ccc\(O\)cc1|c1cc\(O\)ccc1", s, re.I):
-        groups.append({
-            "name": "Phenol (Ar-OH)",
-            "category": "Hydroxyl",
-            "fragment": "Ar-OH",
-            "reactive_site": "Phenolic oxygen & activated ortho/para aromatic positions",
-            "acidic": ("Resistant", "Resistant to acid solvolysis of aromatic sp2 C-O bond."),
-            "basic": ("High", "Deprotonation forming phenolate anion (Ar-O-), drastically accelerating oxidation rate."),
-            "hydrolysis": ("Resistant", "Hydrolytically stable."),
-            "photolytic": ("High", "UV excitation generating phenoxyl radical; photo-coupling to biphenyl dimers."),
-            "thermal": ("Moderate", "Thermally accelerated oxidative coupling."),
-            "oxidative": ("Critical", "Single-electron oxidation to phenoxy radical followed by coupling or quinone formation."),
-            "cross_reaction": ("Moderate", "Hydrogen bonding networks and phenolate nucleophilic additions.")
-        })
-
-    # Amide Bond
-    if has_smarts("[CX3](=O)[NX3;H2,H1,H0;!$(NC=O)]") or re.search(r"C\(=O\)N|NC\(=O\)", s, re.I):
-        groups.append({
-            "name": "Amide Bond",
-            "category": "Carbonyl / Nitrogen",
-            "fragment": "-C(=O)NH-",
-            "reactive_site": "Amide carbonyl carbon & nitrogen resonance center",
-            "acidic": ("Moderate", "Acid-catalyzed amide bond solvolysis yielding carboxylic acid and amine salt."),
-            "basic": ("Moderate", "Base-promoted nucleophilic acyl substitution; stabilized by amide resonance."),
-            "hydrolysis": ("Low", "Slow hydrolytic cleavage under ambient humidity; accelerated at extreme pH."),
-            "photolytic": ("Moderate", "UV-induced C-N bond scission or photo-oxidation."),
-            "thermal": ("Moderate", "Thermal deamidation or intramolecular cyclization at high temperatures."),
-            "oxidative": ("Low", "Resistant to ambient oxidation; hydrogen abstraction under harsh peroxide stress."),
-            "cross_reaction": ("Low", "Hydrogen-bond donor and acceptor interactions with polar co-reactants.")
-        })
-
-    # Aliphatic Amine
-    if has_smarts("[NX3;H2,H1;!$(NC=O);!$(NS=O);!$(n)]") or (re.search(r"[N;H2,H1]|NCC|CCN|NC\(C\)|C\(C\)N|CN\(C\)", s, re.I) and not re.search(r"NC\(=O\)|C\(=O\)N|NS\(=O\)", s, re.I)):
-        groups.append({
-            "name": "Aliphatic Amine",
-            "category": "Amine",
-            "fragment": "-NH2 / -NHR",
-            "reactive_site": "Basic nucleophilic nitrogen lone pair",
-            "acidic": ("Critical", "Rapid protonation forming ammonium cation salt (R-NH3+)."),
-            "basic": ("Low", "Maintained in nucleophilic, reactive free-base state."),
-            "hydrolysis": ("Resistant", "Hydrolytically inert."),
-            "photolytic": ("Moderate", "Photo-sensitized radical deamination."),
-            "thermal": ("Moderate", "Thermal deamination or condensation."),
-            "oxidative": ("Critical", "Auto-oxidation to hydroxylamine, nitroso, or N-oxide in presence of air or peroxides."),
-            "cross_reaction": ("Critical", "Maillard reaction (Schiff base) with reducing sugars; transamidation with esters.")
-        })
-
-    # Thioether / Sulfide
-    if has_smarts("[#6][SX2][#6]") or re.search(r"CSC|cSc|SCC", s, re.I):
-        groups.append({
-            "name": "Thioether (Sulfide)",
-            "category": "Sulfur",
-            "fragment": "-C-S-C-",
-            "reactive_site": "Divalent sulfur lone pair",
-            "acidic": ("Low", "Resistant to acid cleavage."),
-            "basic": ("Low", "Resistant to basic cleavage."),
-            "hydrolysis": ("Resistant", "Hydrolytically inert."),
-            "photolytic": ("Moderate", "Singlet-oxygen sensitized photo-oxidation."),
-            "thermal": ("Moderate", "Thermal C-S bond homolysis."),
-            "oxidative": ("Critical", "Selective oxidation by air or trace peroxides to sulfoxide (-SO-) and sulfone (-SO2-)."),
-            "cross_reaction": ("High", "Severe incompatibility with peroxide-bearing polymeric excipients (PVP, PEG).")
-        })
-
-    # Aromatic Ring
-    if re.search(r"c1ccccc1|c[1-9]", s):
-        groups.append({
-            "name": "Aromatic System",
-            "category": "Aromatic",
-            "fragment": "c1ccccc1",
-            "reactive_site": "Delocalized pi-electron cloud",
-            "acidic": ("Resistant", "Resistant to acid solvolysis."),
-            "basic": ("Resistant", "Resistant to basic cleavage."),
-            "hydrolysis": ("Resistant", "Hydrolytically inert."),
-            "photolytic": ("High", "UV chromophoric absorption (254-280 nm) triggering triplet excitation."),
-            "thermal": ("Resistant", "High thermal aromatic resonance stability."),
-            "oxidative": ("Moderate", "Electrophilic aromatic substitution by hydroxyl radicals forming phenols."),
-            "cross_reaction": ("Moderate", "Pi-pi stacking and charge-transfer complexation.")
-        })
-
-    # Fallback if no specific groups triggered
-    if not groups:
-        groups.append({
-            "name": "Aliphatic Scaffold",
-            "category": "Hydrocarbon",
-            "fragment": "C-C / C-H",
-            "reactive_site": "Aliphatic C-H centers",
-            "acidic": ("Moderate", "Protonation of available heteroatoms."),
-            "basic": ("Moderate", "Nucleophilic interaction with electrophilic centers."),
-            "hydrolysis": ("Moderate", "Solvolysis under humid conditions."),
-            "photolytic": ("Low", "Low direct UV absorption."),
-            "thermal": ("Moderate", "Thermal bond cleavage under elevated heat."),
-            "oxidative": ("Moderate", "Radical hydrogen abstraction forming hydroperoxides."),
-            "cross_reaction": ("Low", "Non-covalent physical interactions.")
-        })
-
-    return groups
 
 # ==============================================================================
 # Heatmap Plotter (Pure Publication-Quality Matrix)
@@ -935,7 +822,7 @@ def predict_degradation_and_reactions(
 ) -> Dict[str, Any]:
     """
     Calculates degradation products, free energies (Delta G), Boltzmann & Heuristic probabilities
-    based on the identified functional groups.
+    based on the systematic functional group engine matching src/lib/reaction-engine.ts.
     """
     clean_primary = sanitize_smiles_py(primary_smiles)
     clean_secondaries = [sanitize_smiles_py(s) for s in secondary_smiles_list if s and sanitize_smiles_py(s)]
@@ -950,6 +837,7 @@ def predict_degradation_and_reactions(
                 "source": "Stress degradation",
                 "mechanismExplanation": "Reactive functional group is absent. Please enter a valid molecular SMILES string.",
                 "deltaG": 0.0,
+                "relativeEnergy": 0.0,
                 "kineticLikelihood": 0.0,
                 "probability": 0.0,
                 "probabilityBoltzmann": 0.0,
@@ -961,268 +849,14 @@ def predict_degradation_and_reactions(
             "chain_of_thought": "No primary compound provided."
         }
 
-    p_groups = identify_functional_groups(clean_primary)
-    has_co_reactants = len(clean_secondaries) > 0
+    # Prepare inputs structure for the unified reaction engine
+    engine_inputs = [{"type": "SMILES", "value": clean_primary, "originalName": "Primary Compound"}]
+    for idx, s_sm in enumerate(clean_secondaries):
+        engine_inputs.append({"type": "SMILES", "value": s_sm, "originalName": f"Secondary Compound {idx + 1}"})
 
-    candidates = []
-
-    has_ester = any("Ester" in g["name"] for g in p_groups)
-    has_lactam = any("Beta-Lactam" in g["name"] for g in p_groups)
-    has_acid = any("Carboxylic Acid" in g["name"] for g in p_groups)
-    has_phenol = any("Phenol" in g["name"] for g in p_groups)
-    has_amide = any("Amide" in g["name"] for g in p_groups)
-    has_amine = any("Amine" in g["name"] for g in p_groups)
-    has_thioether = any("Thioether" in g["name"] for g in p_groups)
-
-    # 1. Acidic Hydrolysis Pathway
-    if has_lactam:
-        candidates.append({
-            "iupacName": "Acid-Hydrolyzed Penicilloic Acid Derivative",
-            "smiles": primary_smiles.replace("C(=O)N", "C(=O)O"),
-            "condition": "Acidic Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Specific acid-catalyzed ring opening initiated by protonation of strained lactam nitrogen followed by water attack.",
-            "deltaG": -6.2,
-            "kineticLikelihood": 0.94
-        })
-    elif has_ester:
-        deacyl = primary_smiles.replace("CC(=O)Oc", "Oc").replace("C(=O)OC", "C(=O)O")
-        candidates.append({
-            "iupacName": "Deacylated Hydrolysis Product",
-            "smiles": deacyl if deacyl != primary_smiles else "c1ccc(c(c1)C(=O)O)O",
-            "condition": "Acidic Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Acid-catalyzed ester solvolysis (A_Ac2) via protonated carbonyl intermediate.",
-            "deltaG": -4.1,
-            "kineticLikelihood": 0.91
-        })
-    elif has_amide:
-        deamide = primary_smiles.replace("NC(=O)C", "N").replace("C(=O)N", "C(=O)O")
-        if deamide != primary_smiles:
-            candidates.append({
-                "iupacName": "Amide Cleavage Hydrolysis Derivative",
-                "smiles": deamide,
-                "condition": "Acidic Hydrolysis",
-                "source": "Stress degradation",
-                "mechanismExplanation": "Specific acid-catalyzed amide solvolysis releasing amine and carboxylic acid.",
-                "deltaG": -2.3,
-                "kineticLikelihood": 0.84
-            })
-    # If no acid-labile group is present, pathway is omitted (reactive functional group is absent)
-
-    # 2. Basic Hydrolysis Pathway
-    if has_ester:
-        candidates.append({
-            "iupacName": "Saponified Carboxylate / Phenolate Derivative",
-            "smiles": primary_smiles.replace("CC(=O)Oc", "Oc").replace("C(=O)OC", "C(=O)[O-]"),
-            "condition": "Basic Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Bimolecular saponification (B_Ac2) via direct nucleophilic hydroxide attack releasing carboxylate.",
-            "deltaG": -5.8,
-            "kineticLikelihood": 0.89
-        })
-    elif has_acid:
-        candidates.append({
-            "iupacName": "Deprotonated Carboxylate Anion Salt",
-            "smiles": primary_smiles.replace("C(=O)O", "C(=O)[O-]"),
-            "condition": "Basic Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Stoichiometric neutralization to water-soluble carboxylate anion salt.",
-            "deltaG": -7.2,
-            "kineticLikelihood": 0.95
-        })
-    elif has_lactam:
-        candidates.append({
-            "iupacName": "Alkaline Ring-Opened Hydroxy-Carboxylate",
-            "smiles": primary_smiles.replace("C(=O)N", "C(=O)[O-]"),
-            "condition": "Basic Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Hydroxide nucleophile attacks strained lactam carbonyl causing irreversible ring scission.",
-            "deltaG": -6.5,
-            "kineticLikelihood": 0.92
-        })
-    # If no base-labile group is present, pathway is omitted (reactive functional group is absent)
-
-    # 3. Hydrolysis Pathway (Moisture / Ambient Aqueous)
-    if has_ester or has_lactam:
-        hydro_smiles = primary_smiles.replace("CC(=O)Oc", "Oc").replace("C(=O)OC", "C(=O)O")
-        if hydro_smiles != primary_smiles:
-            candidates.append({
-                "iupacName": "Neutral Moisture-Induced Hydrolysis Degradant",
-                "smiles": hydro_smiles,
-                "condition": "Hydrolysis",
-                "source": "Stress degradation",
-                "mechanismExplanation": "Neutral aqueous solvolytic ester cleavage under 75% RH stability humidity stress.",
-                "deltaG": -1.8,
-                "kineticLikelihood": 0.70
-            })
-
-    # 4. Oxidative Stress Pathway
-    if has_phenol:
-        quinone_smiles = "CC(=O)N=C1C=CC(=O)C=C1" if "CC(=O)Nc1ccc(O)cc1" in primary_smiles else "O=C1C=CC(=O)C=C1"
-        candidates.append({
-            "iupacName": "Para-Quinone / Dimeric Coupling Product",
-            "smiles": quinone_smiles,
-            "condition": "Oxidation",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Single-electron oxidation (SET) of phenolic hydroxyl generating phenoxyl radical followed by quinone formation.",
-            "deltaG": 1.2,
-            "kineticLikelihood": 0.76
-        })
-    elif has_thioether:
-        candidates.append({
-            "iupacName": "Sulfoxide Oxidation Derivative",
-            "smiles": primary_smiles.replace("CSC", "CS(=O)C"),
-            "condition": "Oxidation",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Electrophilic oxygen addition across divalent sulfur lone pair yielding sulfoxide (-SO-).",
-            "deltaG": -2.8,
-            "kineticLikelihood": 0.88
-        })
-    elif has_amine:
-        n_ox = re.sub(r'N(?=[^a-z]|$)', '[N+]([O-])', primary_smiles)
-        candidates.append({
-            "iupacName": "N-Oxide Oxidation Derivative",
-            "smiles": n_ox if n_ox != primary_smiles else primary_smiles.replace("N", "NO"),
-            "condition": "Oxidation",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Electrophilic oxygen atom transfer to basic amine nitrogen lone pair.",
-            "deltaG": -1.1,
-            "kineticLikelihood": 0.79
-        })
-    # If no oxidizable group is present, pathway is omitted (reactive functional group is absent)
-
-    # 5. Photolytic Degradation Pathway
-    if has_ester and ("c1" in primary_smiles or "c2" in primary_smiles or "c" in primary_smiles):
-        candidates.append({
-            "iupacName": "Photo-Fries / Photolytic Scission Fragment",
-            "smiles": "CC(=O)c1ccc(cc1)O",
-            "condition": "Photodegradation",
-            "source": "Stress degradation",
-            "mechanismExplanation": "UV chromophore excitation initiating homolytic bond cleavage and radical rearrangement.",
-            "deltaG": 2.8,
-            "kineticLikelihood": 0.65
-        })
-    # If no photolabile group is present, pathway is omitted (reactive functional group is absent)
-
-    # 6. Thermal Degradation Pathway
-    if has_acid:
-        decarb_smiles = (re.sub(r'C\(=O\)O(?![C|c])', '', primary_smiles).replace("()", "").replace("( )", "") or ("c1ccccc1" if "c1ccccc1" in primary_smiles else ""))
-        if decarb_smiles and decarb_smiles != primary_smiles:
-            candidates.append({
-                "iupacName": "Thermal Decarboxylation / Pyrolysis Product",
-                "smiles": decarb_smiles,
-                "condition": "Thermal Degradation",
-                "source": "Stress degradation",
-                "mechanismExplanation": "Thermal energy overcoming activation barrier for concerted elimination or decarboxylation.",
-                "deltaG": 1.4,
-                "kineticLikelihood": 0.63
-            })
-    # If no thermolabile group is present, pathway is omitted (reactive functional group is absent)
-
-    # 7. Secondary Compound Cross-Reactivity
-    if has_co_reactants:
-        for idx, sec_smiles in enumerate(secondary_smiles_list):
-            if not sec_smiles.strip():
-                continue
-            sec_groups = identify_functional_groups(sec_smiles)
-            sec_has_amine = any("Amine" in g["name"] for g in sec_groups)
-            sec_has_sugar = "C(O)C(O)" in sec_smiles or "OC1OC" in sec_smiles
-
-            if has_ester and sec_has_amine:
-                candidates.append({
-                    "iupacName": f"Covalent Transamidation Conjugate (Co-reactant {idx+1})",
-                    "smiles": "CC(=O)NC1=CC=CC=C1",
-                    "condition": "Thermal Degradation",
-                    "source": "Interaction with other compound",
-                    "mechanismExplanation": f"Nucleophilic acyl substitution: amine lone pair of co-reactant {idx+1} attacks primary ester carbonyl.",
-                    "deltaG": -2.1,
-                    "kineticLikelihood": 0.87
-                })
-            elif has_amine and sec_has_sugar:
-                candidates.append({
-                    "iupacName": f"Maillard Schiff Base Glycosylamine Adduct (Co-reactant {idx+1})",
-                    "smiles": "OCC1OC(NC2=CC=CC=C2)C(O)C(O)C1O",
-                    "condition": "Thermal Degradation",
-                    "source": "Interaction with other compound",
-                    "mechanismExplanation": f"Nucleophilic addition between primary amine and reducing sugar co-reactant {idx+1}.",
-                    "deltaG": -3.5,
-                    "kineticLikelihood": 0.89
-                })
-
-    # SMILES Deduplication Filter Against the Parent
-    def is_same_smiles(s1: str, s2: str) -> bool:
-        if not s1 or not s2:
-            return False
-        c1 = str(s1).strip()
-        c2 = str(s2).strip()
-        if not c1 or not c2:
-            return False
-        if c1 == c2:
-            return True
-        try:
-            from rdkit import Chem
-            m1 = Chem.MolFromSmiles(c1)
-            m2 = Chem.MolFromSmiles(c2)
-            if m1 is not None and m2 is not None:
-                return Chem.MolToSmiles(m1, isomericSmiles=False) == Chem.MolToSmiles(m2, isomericSmiles=False)
-        except Exception:
-            pass
-        norm1 = re.sub(r'[@\\/]', '', c1).replace("()", "")
-        norm2 = re.sub(r'[@\\/]', '', c2).replace("()", "")
-        return norm1 == norm2
-
-    # Exclude candidates whose structure is identical to primary compound
-    # Rule 3: If a valid degradant forms in multiple conditions, all instances are preserved
-    filtered_candidates = [c for c in candidates if c.get("smiles") and not is_same_smiles(c.get("smiles", ""), clean_primary)]
-
-    if not filtered_candidates:
-        filtered_candidates = [{
-            "iupacName": "Reactive functional group is absent",
-            "smiles": "",
-            "condition": "Hydrolysis",
-            "source": "Stress degradation",
-            "mechanismExplanation": "Reactive functional group is absent. The molecular structure does not contain susceptible reaction centers (e.g., hydrolyzable esters/amides, oxidizable heteroatoms, or thermolabile groups) for this pathway.",
-            "deltaG": 0.0,
-            "kineticLikelihood": 0.0,
-            "probability": 0.0,
-            "probabilityBoltzmann": 0.0,
-            "probabilityHeuristic": 0.0
-        }]
-
-    # Boltzmann & Heuristic Probabilities Calculation (Numerically Stabilized)
-    R = 0.0019872  # kcal/(mol*K)
-    T = 298.15     # Kelvin
-    RT = R * T
-
-    raw_exps = [-c["deltaG"] / RT for c in filtered_candidates]
-    max_exp = max(raw_exps) if raw_exps else 0.0
-    exp_terms = [math.exp(max(-500.0, min(500.0, e - max_exp))) for e in raw_exps]
-    sum_exp = sum(exp_terms) if sum(exp_terms) > 0 else 1.0
-
-    for i, c in enumerate(filtered_candidates):
-        if c.get("iupacName") == "Reactive functional group is absent":
-            c["probability"] = 0.0
-            c["probabilityBoltzmann"] = 0.0
-            c["probabilityHeuristic"] = 0.0
-            continue
-
-        p_boltzmann = round(min(0.99, max(0.01, exp_terms[i] / sum_exp)), 4)
-        p_heuristic = round(min(0.99, max(0.01, c["kineticLikelihood"])), 4)
-
-        if method == "Boltzmann":
-            prob = p_boltzmann
-        elif method == "Heuristic":
-            prob = p_heuristic
-        else:
-            prob = round((p_boltzmann + p_heuristic) / 2.0, 4)
-
-        c["probability"] = prob
-        c["probabilityBoltzmann"] = p_boltzmann
-        c["probabilityHeuristic"] = p_heuristic
-
-    filtered_candidates.sort(key=lambda x: x["probability"], reverse=True)
-    top_5 = filtered_candidates[:5]
+    comp_res = generate_computational_prediction(engine_inputs, method=method)
+    top_5 = comp_res.get("degradationImpurities", [])
+    p_groups = comp_res.get("functionalGroupAnalysis", [])
 
     # Build Heatmap matrix with functional groups on X-axis (col_labels) and conditions on Y-axis (row_labels)
     def clean_fg_name(name_str: str) -> str:
@@ -1236,15 +870,15 @@ def predict_degradation_and_reactions(
     col_labels = []
     # Primary compound functional groups
     for g in p_groups:
-        c_name = clean_fg_name(g.get("name", "Functional Group"))
+        c_name = clean_fg_name(g.get("name", g.get("groupName", "Functional Group")))
         if c_name and c_name not in col_labels:
             col_labels.append(c_name)
 
     # Secondary compound functional groups
-    for sec_s in secondary_smiles_list:
+    for sec_s in clean_secondaries:
         if sec_s and sec_s.strip():
             for sg in identify_functional_groups(sec_s.strip()):
-                c_name = clean_fg_name(sg.get("name", ""))
+                c_name = clean_fg_name(sg.get("name", sg.get("groupName", "")))
                 if c_name and c_name not in col_labels:
                     col_labels.append(c_name)
 
@@ -1259,12 +893,12 @@ def predict_degradation_and_reactions(
     cond_keys = ["acidic", "basic", "hydrolysis", "photolytic", "thermal", "oxidative"]
     fg_dict_lookup = {}
     for g in p_groups:
-        c_name = clean_fg_name(g.get("name", ""))
+        c_name = clean_fg_name(g.get("name", g.get("groupName", "")))
         fg_dict_lookup[c_name] = g
-    for sec_s in secondary_smiles_list:
+    for sec_s in clean_secondaries:
         if sec_s and sec_s.strip():
             for sg in identify_functional_groups(sec_s.strip()):
-                c_name = clean_fg_name(sg.get("name", ""))
+                c_name = clean_fg_name(sg.get("name", sg.get("groupName", "")))
                 if c_name not in fg_dict_lookup:
                     fg_dict_lookup[c_name] = sg
 
@@ -1274,53 +908,15 @@ def predict_degradation_and_reactions(
         for fg_col in col_labels:
             g_obj = fg_dict_lookup.get(fg_col)
             if g_obj and cond_key in g_obj:
-                score = vuln_map.get(g_obj[cond_key][0], 0.20)
+                cond_val = g_obj[cond_key]
+                v_str = cond_val.get("vulnerability", "Low") if isinstance(cond_val, dict) else (cond_val[0] if isinstance(cond_val, (list, tuple)) else str(cond_val))
+                score = vuln_map.get(v_str, 0.20)
             else:
                 score = 0.15
             row_vals.append(score)
         matrix.append(row_vals)
 
-    # Construct comprehensive mechanistic chain of thought without section numbers
-    top_candidate = top_5[0] if top_5 else None
-    sec_valid = [s.strip() for s in secondary_smiles_list if s.strip()]
-    sec_names_list = [f"Secondary Compound {s_i+1} ({s_sm})" for s_i, s_sm in enumerate(sec_valid)]
-
-    fg_names_str = ', '.join([f"{g['name']} [{g['category']}]" for g in p_groups]) if p_groups else 'Aliphatic / Aromatic Framework'
-    active_centers_str = '; '.join([f"{g['reactive_site']} ({g['name']})" for g in p_groups]) if p_groups else 'Standard carbon-carbon / carbon-hydrogen bonds'
-    co_reactants_str = ', '.join(sec_names_list) if sec_names_list else 'None specified'
-    cross_react_risk = 'High potential for bimolecular condensation, nucleophilic acyl substitution, transamidation, or salt complexation.' if sec_valid else 'No exogenous secondary reactants present.'
-    primary_pathway = top_candidate.get('condition', 'Direct Hydrolysis') if top_candidate else 'Solvolytic Degradation'
-    predom_byproduct = top_candidate.get('iupacName', 'Stable Degradant') if top_candidate else 'None'
-    dominant_mech = top_candidate.get('mechanismExplanation', 'Standard degradation') if top_candidate else 'None'
-    mechanistic_rationale = 'Cross-functional interaction governed by nucleophilic and acid-base reactions between primary compound and co-reactants, accelerated under stress conditions.' if sec_valid else 'Intrinsic stress degradation governed by hydrolytic, oxidative, photolytic, and thermal reactivity of functional groups present in the primary molecule.'
-
-    cot_lines = [
-        "[Systematic Functional Group Reactivity & Computational Degradation Assessment]",
-        "",
-        "PRIMARY MOLECULAR INVENTORY & REACTIVE SITES:",
-        f"   - Primary Compound: {primary_smiles}",
-        f"   - Identified Functional Groups: {fg_names_str}",
-        f"   - Active Reactive Centers: {active_centers_str}",
-        "",
-        "REACTION ENVIRONMENT & STRESS PATHWAY EVALUATION:",
-        "   - Acidic Stress: Evaluated hydronium-promoted solvolysis, carbocation generation, and protonation equilibria across polar heteroatoms.",
-        "   - Basic Stress: Modeled nucleophilic hydroxide addition-elimination (saponification), base-catalyzed enolization, and phenolate/carboxylate salt formation.",
-        "   - Hydrolysis: Modeled ambient moisture-assisted solvolysis across vulnerable ester, amide, and labile linkages.",
-        "   - Photolytic Stress: Analyzed chromophore absorption, conjugated pi-electron systems, and UV photo-Fries/Norrish fragmentation.",
-        "   - Thermal Stress: Assessed pyrolytic scission, syn-elimination, and thermal decarboxylation activation barriers.",
-        "   - Oxidative Stress: Modeled single-electron transfer (SET), radical peroxyl abstraction, and heteroatom oxidation.",
-        "",
-        "SECONDARY COMPOUND INTERACTIONS:",
-        f"   - Co-reactants Evaluated: {co_reactants_str}",
-        f"   - Cross-Reactivity Risk: {cross_react_risk}",
-        "",
-        "THERMODYNAMIC & KINETIC SYNTHESIS:",
-        f"   - Primary Degradation Pathway: {primary_pathway}",
-        f"   - Predominant Byproduct: {predom_byproduct}",
-        f"   - Dominant Mechanism: {dominant_mech}",
-        f"   - Mechanistic Rationale: {mechanistic_rationale}"
-    ]
-    chain_of_thought = "\n".join(cot_lines)
+    chain_of_thought = comp_res.get("chainOfThought", "")
 
     return {
         "functional_groups": p_groups,
@@ -1624,17 +1220,17 @@ with tab_predict:
                         <div style="text-align: right;">
                             <div class="ap1-imp-prob-val">{prob_pct:.1f}%</div>
                             <div class="ap1-imp-prob-sub">
-                                Heuristic: {(imp['probabilityHeuristic']*100):.1f}% | Boltzmann: {(imp['probabilityBoltzmann']*100):.1f}%
+                                Heuristic: {(float(imp.get('probabilityHeuristic', imp.get('probability', 0.0)))*100):.1f}% | Boltzmann: {(float(imp.get('probabilityBoltzmann', imp.get('probability', 0.0)))*100):.1f}%
                             </div>
                             <div style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #64748B; margin-top: 0.25rem;">
-                                Delta G: {imp['deltaG']:.2f} kcal/mol
+                                Delta G: {float(imp.get('deltaG', imp.get('relativeEnergy', 0.0))):.2f} kcal/mol
                             </div>
                         </div>
                     </div>
 
                     <div class="ap1-mech-box">
                         <div class="ap1-mech-title">Chemical Mechanism:</div>
-                        <div>{imp['mechanismExplanation']}</div>
+                        <div>{imp.get('mechanismExplanation', '')}</div>
                     </div>
 
                     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">

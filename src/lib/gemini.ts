@@ -19,7 +19,7 @@ export interface FunctionalGroupReactivity {
   photolytic: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
   thermal: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
   oxidative: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "Resistant"; mechanism: string };
-  secondaryInteraction?: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "None"; partnerGroup?: string; mechanism: string };
+  secondaryInteraction?: { vulnerability: "Critical" | "High" | "Moderate" | "Low" | "None" | "Resistant"; partnerGroup?: string; mechanism: string };
 }
 
 export interface PredictionResult {

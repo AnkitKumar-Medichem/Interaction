@@ -7,6 +7,7 @@ import { createServer as createViteServer } from "vite";
 import { generateComputationalPrediction, lookupCompoundSmiles } from "./src/lib/reaction-engine";
 import { generateInteractionHeatmap } from "./src/lib/heatmap-engine";
 import { renderSeabornHeatmap } from "./src/lib/python-seaborn";
+import { sanitizeSmiles, getRelaxedSmilesCandidates } from "./src/lib/rdkit";
 
 const app = express();
 const PORT = 3000;
@@ -569,7 +570,141 @@ app.post("/api/interaction-heatmap", async (req: Request, res: Response) => {
 });
 
 // ==========================================
-// 4. Vite Middleware & Asset Serving
+// 4. Chemical Structure Depiction Engine
+// ==========================================
+let serverRdkitInstance: any = null;
+let serverRdkitLoadingPromise: Promise<any> | null = null;
+const serverSvgCache = new Map<string, string>();
+
+async function getServerRDKit(): Promise<any> {
+  if (serverRdkitInstance) return serverRdkitInstance;
+  if (serverRdkitLoadingPromise) return serverRdkitLoadingPromise;
+
+  serverRdkitLoadingPromise = (async () => {
+    try {
+      const fs = await import("fs");
+      const pathModule = await import("path");
+      const { createRequire } = await import("module");
+      const jsPath = pathModule.resolve(process.cwd(), "public/RDKit_minimal.js");
+      const wasmPath = pathModule.resolve(process.cwd(), "public/RDKit_minimal.wasm");
+      
+      if (!fs.existsSync(jsPath) || !fs.existsSync(wasmPath)) {
+        console.warn("RDKit minimal files not found in public directory for server-side rendering");
+        return null;
+      }
+
+      const nodeRequire = typeof require !== "undefined" 
+        ? require 
+        : createRequire(pathModule.resolve(process.cwd(), "package.json"));
+      const code = fs.readFileSync(jsPath, "utf8");
+      const initFn = new Function("require", "__dirname", "__filename", code + "; return initRDKitModule;")(
+        nodeRequire,
+        pathModule.dirname(jsPath),
+        jsPath
+      );
+      const rdkit = await initFn({
+        locateFile: () => wasmPath
+      });
+      serverRdkitInstance = rdkit;
+      console.log("Server RDKit WASM loaded successfully");
+      return rdkit;
+    } catch (err) {
+      console.error("Failed to initialize server-side RDKit WASM:", err);
+      return null;
+    } finally {
+      serverRdkitLoadingPromise = null;
+    }
+  })();
+
+  return serverRdkitLoadingPromise;
+}
+
+// Warm up server RDKit in the background on startup
+getServerRDKit().catch(() => {});
+
+app.get("/api/structure", async (req: Request, res: Response) => {
+  const rawSmiles = req.query.smiles as string;
+  if (!rawSmiles) {
+    return res.status(400).send("Missing smiles parameter");
+  }
+
+  const width = Math.min(800, Math.max(80, parseInt(req.query.w as string) || 240));
+  const height = Math.min(800, Math.max(80, parseInt(req.query.h as string) || 200));
+  const clean = sanitizeSmiles(rawSmiles);
+
+  if (!clean) {
+    return res.status(400).send("Invalid SMILES format");
+  }
+
+  const cacheKey = `${clean}_${width}x${height}`;
+  if (serverSvgCache.has(cacheKey)) {
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.send(serverSvgCache.get(cacheKey)!);
+  }
+
+  // 1. Try server-side RDKit with relaxed candidate parsing
+  try {
+    const rdkit = await getServerRDKit();
+    if (rdkit) {
+      const candidates = getRelaxedSmilesCandidates(clean);
+      for (const candidate of candidates) {
+        try {
+          const mol = rdkit.get_mol(candidate);
+          if (mol && mol.is_valid()) {
+            const rawSvg = mol.get_svg(width, height);
+            mol.delete();
+            if (rawSvg) {
+              const cleanSvg = rawSvg.replace(/<\?xml[^>]*\?>/i, "").trim();
+              serverSvgCache.set(cacheKey, cleanSvg);
+              res.setHeader("Content-Type", "image/svg+xml");
+              res.setHeader("Cache-Control", "public, max-age=86400");
+              return res.send(cleanSvg);
+            }
+          } else if (mol) {
+            mol.delete();
+          }
+        } catch {
+          // continue with next candidate
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Server RDKit generation error:", err);
+  }
+
+  // 2. Resilient fallback: proxy to Cactus NCI
+  try {
+    const cactusUrl = `https://cactus.nci.nih.gov/chemical/structure/${encodeURIComponent(clean)}/image`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const resp = await fetch(cactusUrl, { signal: controller.signal });
+    clearTimeout(timer);
+    if (resp.ok) {
+      const buf = await resp.arrayBuffer();
+      res.setHeader("Content-Type", resp.headers.get("content-type") || "image/gif");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.send(Buffer.from(buf));
+    }
+  } catch {
+    // Cactus proxy timed out or failed
+  }
+
+  // 3. Fallback: generate a clean, elegant SVG placeholder
+  const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none">
+    <rect width="${width}" height="${height}" fill="#F8FAFC" rx="8"/>
+    <circle cx="${width/2}" cy="${height/2 - 12}" r="18" stroke="#94A3B8" stroke-width="1.5" fill="#FFFFFF"/>
+    <path d="M${width/2 - 8} ${height/2 - 12} L${width/2 + 8} ${height/2 - 12} M${width/2} ${height/2 - 20} L${width/2} ${height/2 - 4}" stroke="#64748B" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="${width/2}" y="${height/2 + 22}" fill="#64748B" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Structure Diagram</text>
+  </svg>`;
+
+  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  return res.send(fallbackSvg);
+});
+
+// ==========================================
+// 5. Vite Middleware & Asset Serving
 // ==========================================
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

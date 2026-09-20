@@ -32,13 +32,77 @@ const descriptorCache = new Map<string, MolecularDescriptors | null>();
 
 export function sanitizeSmiles(raw: string): string {
   if (!raw) return "";
-  let s = raw.trim();
+  let s = String(raw).trim();
+  
+  // 1. Strip markdown code block wrappers
+  s = s.replace(/```(?:smiles)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
+  
+  // 2. Strip leading/trailing quotes, backticks, or brackets
   s = s.replace(/^[`"']+|[`"']+$/g, '');
+  
+  // 3. Strip common text labels prefixed by LLMs
   s = s.replace(/^(?:canonical\s+)?smiles\s*:\s*/i, '');
-  s = s.replace(/\s+\(.*?\)$/, '');
+  s = s.replace(/^(?:structure|compound|smiles)\s*:\s*/i, '');
+  
+  // 4. Strip trailing descriptive notes like (major), (impurity), etc.
+  s = s.replace(/\s*\([a-zA-Z0-9\s,._-]+\)$/, '');
+  s = s.replace(/\s*\[[a-zA-Z0-9\s,._-]+\]$/, '');
+  
+  // 5. Clean up punctuation, spaces, and formatting quirks
   s = s.replace(/[;,. \t]+$/, '');
   s = s.replace(/\s+/g, '');
+  
+  // 6. Repair known syntax glitches
+  s = s.replace(/\[NOa\+\]/g, '[Na+]');
+  s = s.replace(/\[\[N\+\]\(\[O-\]\)\+\]/g, '[N+]([O-])');
+  s = s.replace(/\[N\+\]\(\[O-\]\)\+/g, '[N+]([O-])');
+  s = s.replace(/\(\s*\)/g, '');
+  s = s.replace(/\.{2,}/g, '.');
+  s = s.replace(/^\.|\.$/g, '');
+  
   return s;
+}
+
+/**
+ * Generates an array of fallback candidate SMILES strings with relaxed syntax
+ * to ensure that slightly non-standard structures can still be parsed and rendered.
+ */
+export function getRelaxedSmilesCandidates(smiles: string): string[] {
+  const clean = sanitizeSmiles(smiles);
+  if (!clean) return [];
+  
+  const candidates: string[] = [clean];
+  
+  // 1. Strip stereochemical markers (@, @@, /, \)
+  const noStereo = clean.replace(/[@\\/]/g, "").replace(/\(\)/g, "");
+  if (noStereo && noStereo !== clean && !candidates.includes(noStereo)) {
+    candidates.push(noStereo);
+  }
+  
+  // 2. Neutralize carboxylate and ammonium formal charges
+  const neutralized = clean
+    .replace(/\[O-\]/g, "O")
+    .replace(/\[NH3\+\]/g, "N")
+    .replace(/\[N\+\]\(\[O-\]\)/g, "N=O");
+  if (neutralized && neutralized !== clean && !candidates.includes(neutralized)) {
+    candidates.push(neutralized);
+  }
+  
+  // 3. For multi-component salts (e.g. drug.[Mg+2]), isolate the largest organic fragment
+  if (clean.includes(".")) {
+    const frags = clean.split(".").sort((a, b) => b.length - a.length);
+    for (const frag of frags) {
+      if (frag.length > 3 && !candidates.includes(frag)) {
+        candidates.push(frag);
+        const fragNoStereo = frag.replace(/[@\\/]/g, "").replace(/\(\)/g, "");
+        if (fragNoStereo && !candidates.includes(fragNoStereo)) {
+          candidates.push(fragNoStereo);
+        }
+      }
+    }
+  }
+  
+  return candidates;
 }
 
 export async function initRDKit(): Promise<RDKitModule> {
@@ -149,24 +213,24 @@ export async function getMoleculeSvg(smiles: string, width: number = 200, height
 
   try {
     const rdkit = await initRDKit();
-    let mol = rdkit.get_mol(cleanInputSmiles);
+    const candidates = getRelaxedSmilesCandidates(cleanInputSmiles);
     
-    // Fallback: try parsing with relaxed stereochemistry or empty branch pruning
-    if (!mol || !mol.is_valid()) {
-      if (mol) mol.delete();
-      const relaxed = cleanInputSmiles.replace(/[@\\/]/g, "").replace(/\(\)/g, "");
-      if (relaxed && relaxed !== cleanInputSmiles) {
-        mol = rdkit.get_mol(relaxed);
+    let mol: RDKitMolecule | null = null;
+    for (const candidate of candidates) {
+      try {
+        const testMol = rdkit.get_mol(candidate);
+        if (testMol && testMol.is_valid()) {
+          mol = testMol;
+          break;
+        } else if (testMol) {
+          testMol.delete();
+        }
+      } catch {
+        // try next candidate
       }
     }
     
     if (!mol) return null;
-    
-    const isValid = mol.is_valid();
-    if (!isValid) {
-      mol.delete();
-      return null;
-    }
     
     // RDKit minimal get_svg takes width and height parameters directly
     const rawSvg = mol.get_svg(width, height);
