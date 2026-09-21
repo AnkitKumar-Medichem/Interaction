@@ -14,30 +14,6 @@ import datetime
 import csv
 import html
 from typing import List, Dict, Any, Tuple
-import sys
-
-# Ensure local lib is in python search path
-_current_dir = os.path.dirname(os.path.abspath(__file__))
-_lib_dir = os.path.join(_current_dir, "src", "lib")
-if _lib_dir not in sys.path:
-    sys.path.insert(0, _lib_dir)
-
-try:
-    from py_reaction_engine import (
-        detect_functional_groups_detailed,
-        identify_functional_groups,
-        generate_computational_prediction,
-        lookup_compound_smiles,
-        PHARMA_COMPOUNDS
-    )
-except ImportError:
-    from src.lib.py_reaction_engine import (
-        detect_functional_groups_detailed,
-        identify_functional_groups,
-        generate_computational_prediction,
-        lookup_compound_smiles,
-        PHARMA_COMPOUNDS
-    )
 
 # Optional 3rd-party dependencies with resilient fallbacks
 try:
@@ -65,28 +41,17 @@ except Exception:
 try:
     import streamlit as st
 except ImportError:
-    class DummyContext:
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
-        def __iter__(self): return iter([DummyContext(), DummyContext(), DummyContext(), DummyContext()])
-        def __getattr__(self, name): return lambda *a, **kw: DummyContext()
+    raise RuntimeError("Streamlit is required to run this application. Please run: pip install streamlit")
 
-    class DummySessionState(dict):
-        def __getattr__(self, name):
-            return self.get(name)
-        def __setattr__(self, name, value):
-            self[name] = value
+# Reaction engine (RDKit + SMARTS, lives in reaction_engine.py next to this file).
+# If it cannot be imported the app still starts and explains what is missing.
+try:
+    import reaction_engine as _rxe
+    _RXE_ERROR = None
+except Exception as _rxe_exc:  # pragma: no cover
+    _rxe = None
+    _RXE_ERROR = _rxe_exc
 
-    class DummyStreamlit:
-        session_state = DummySessionState()
-        def tabs(self, tab_list, *args, **kwargs):
-            return [DummyContext() for _ in tab_list]
-        def columns(self, col_spec, *args, **kwargs):
-            n = col_spec if isinstance(col_spec, int) else len(col_spec)
-            return [DummyContext() for _ in range(n)]
-        def __getattr__(self, name):
-            return lambda *a, **kw: DummyContext()
-    st = DummyStreamlit()
 
 def safe_rerun():
     """Reruns the Streamlit application safely across different Streamlit versions."""
@@ -698,22 +663,17 @@ DEFAULT_CONDITIONS = ["Acidic", "Basic", "Hydrolysis", "Photolysis", "Thermal", 
 def identify_functional_groups(smiles: str) -> List[Dict[str, Any]]:
     """
     Identifies functional groups and maps mechanistic reactivity across:
-    Acidic, Basic, Hydrolysis, Photolytic, Thermal, Oxidative conditions.
-    Maintains 100% parity with src/lib/reaction-engine.ts.
+    Acidic, Basic, Hydrolysis, Photolytic, Thermal, Oxidative conditions (plus cross-interaction).
+    Graph-based SMARTS perception in reaction_engine.py (independent of how a SMILES is written);
+    returns [] for input that is not a valid molecule instead of guessing.
     """
     s = sanitize_smiles_py(smiles)
-    if not s:
+    if not s or _rxe is None:
         return []
     try:
-        from py_reaction_engine import identify_functional_groups as _id_fg
-        return _id_fg(s)
+        return _rxe.identify_functional_groups(s)
     except Exception:
-        try:
-            from src.lib.py_reaction_engine import identify_functional_groups as _id_fg
-            return _id_fg(s)
-        except Exception:
-            return []
-
+        return []
 
 # ==============================================================================
 # Heatmap Plotter (Pure Publication-Quality Matrix)
@@ -822,12 +782,14 @@ def predict_degradation_and_reactions(
 ) -> Dict[str, Any]:
     """
     Calculates degradation products, free energies (Delta G), Boltzmann & Heuristic probabilities
-    based on the systematic functional group engine matching src/lib/reaction-engine.ts.
+    from the functional groups of the primary compound and of any co-reactants.
+    Chemistry is done by reaction_engine.py (graph-based, RDKit); this function keeps the
+    dictionary contract used by the rest of the UI (impurities, heatmap, chain of thought).
     """
     clean_primary = sanitize_smiles_py(primary_smiles)
     clean_secondaries = [sanitize_smiles_py(s) for s in secondary_smiles_list if s and sanitize_smiles_py(s)]
 
-    if not clean_primary:
+    def _absent_result(message: str, chain: str) -> Dict[str, Any]:
         return {
             "functional_groups": [],
             "impurities": [{
@@ -835,9 +797,8 @@ def predict_degradation_and_reactions(
                 "smiles": "",
                 "condition": "Hydrolysis",
                 "source": "Stress degradation",
-                "mechanismExplanation": "Reactive functional group is absent. Please enter a valid molecular SMILES string.",
+                "mechanismExplanation": message,
                 "deltaG": 0.0,
-                "relativeEnergy": 0.0,
                 "kineticLikelihood": 0.0,
                 "probability": 0.0,
                 "probabilityBoltzmann": 0.0,
@@ -846,17 +807,39 @@ def predict_degradation_and_reactions(
             "heatmap_matrix": [[0.15]*1 for _ in range(6)],
             "row_labels": ["Acidic", "Basic", "Hydrolysis", "Photolysis", "Thermal", "Oxidative"],
             "col_labels": ["Aliphatic Framework"],
-            "chain_of_thought": "No primary compound provided."
+            "chain_of_thought": chain
         }
 
-    # Prepare inputs structure for the unified reaction engine
-    engine_inputs = [{"type": "SMILES", "value": clean_primary, "originalName": "Primary Compound"}]
-    for idx, s_sm in enumerate(clean_secondaries):
-        engine_inputs.append({"type": "SMILES", "value": s_sm, "originalName": f"Secondary Compound {idx + 1}"})
+    if not clean_primary:
+        return _absent_result("Reactive functional group is absent. Please enter a valid molecular SMILES string.",
+                              "No primary compound provided.")
 
-    comp_res = generate_computational_prediction(engine_inputs, method=method)
-    top_5 = comp_res.get("degradationImpurities", [])
-    p_groups = comp_res.get("functionalGroupAnalysis", [])
+    if _rxe is None:
+        note = ("The reaction engine module could not be loaded (%s). Place reaction_engine.py next to app.py "
+                "and make sure RDKit is installed (pip install rdkit)." % (_RXE_ERROR,))
+        return _absent_result(note, note)
+
+    engine = _rxe.predict(clean_primary, clean_secondaries, method)
+    if not engine.get("ok"):
+        return _absent_result(engine.get("reason", "The primary SMILES could not be parsed."),
+                              engine.get("reason", "The primary SMILES could not be parsed."))
+
+    p_groups = engine["functional_groups"]
+    top_5 = engine["impurities"]
+    if not top_5:
+        top_5 = [{
+            "iupacName": "Reactive functional group is absent",
+            "smiles": "",
+            "condition": "Hydrolysis",
+            "source": "Stress degradation",
+            "mechanismExplanation": "Reactive functional group is absent. " + engine.get("mechanism", ""),
+            "deltaG": 0.0,
+            "kineticLikelihood": 0.0,
+            "probability": 0.0,
+            "probabilityBoltzmann": 0.0,
+            "probabilityHeuristic": 0.0
+        }]
+
 
     # Build Heatmap matrix with functional groups on X-axis (col_labels) and conditions on Y-axis (row_labels)
     def clean_fg_name(name_str: str) -> str:
@@ -870,15 +853,15 @@ def predict_degradation_and_reactions(
     col_labels = []
     # Primary compound functional groups
     for g in p_groups:
-        c_name = clean_fg_name(g.get("name", g.get("groupName", "Functional Group")))
+        c_name = clean_fg_name(g.get("name", "Functional Group"))
         if c_name and c_name not in col_labels:
             col_labels.append(c_name)
 
     # Secondary compound functional groups
-    for sec_s in clean_secondaries:
+    for sec_s in secondary_smiles_list:
         if sec_s and sec_s.strip():
             for sg in identify_functional_groups(sec_s.strip()):
-                c_name = clean_fg_name(sg.get("name", sg.get("groupName", "")))
+                c_name = clean_fg_name(sg.get("name", ""))
                 if c_name and c_name not in col_labels:
                     col_labels.append(c_name)
 
@@ -893,12 +876,12 @@ def predict_degradation_and_reactions(
     cond_keys = ["acidic", "basic", "hydrolysis", "photolytic", "thermal", "oxidative"]
     fg_dict_lookup = {}
     for g in p_groups:
-        c_name = clean_fg_name(g.get("name", g.get("groupName", "")))
+        c_name = clean_fg_name(g.get("name", ""))
         fg_dict_lookup[c_name] = g
-    for sec_s in clean_secondaries:
+    for sec_s in secondary_smiles_list:
         if sec_s and sec_s.strip():
             for sg in identify_functional_groups(sec_s.strip()):
-                c_name = clean_fg_name(sg.get("name", sg.get("groupName", "")))
+                c_name = clean_fg_name(sg.get("name", ""))
                 if c_name not in fg_dict_lookup:
                     fg_dict_lookup[c_name] = sg
 
@@ -908,15 +891,14 @@ def predict_degradation_and_reactions(
         for fg_col in col_labels:
             g_obj = fg_dict_lookup.get(fg_col)
             if g_obj and cond_key in g_obj:
-                cond_val = g_obj[cond_key]
-                v_str = cond_val.get("vulnerability", "Low") if isinstance(cond_val, dict) else (cond_val[0] if isinstance(cond_val, (list, tuple)) else str(cond_val))
-                score = vuln_map.get(v_str, 0.20)
+                score = vuln_map.get(g_obj[cond_key][0], 0.20)
             else:
                 score = 0.15
             row_vals.append(score)
         matrix.append(row_vals)
 
-    chain_of_thought = comp_res.get("chainOfThought", "")
+
+    chain_of_thought = engine["chain_of_thought"]
 
     return {
         "functional_groups": p_groups,
@@ -1164,8 +1146,9 @@ with tab_predict:
 
         cot_text = res.get("chain_of_thought", "")
         if cot_text:
+            cot_html = cot_text.replace("\n", "<br>")
             render_html(f"""
-            <div class="ap1-cot-box">{cot_text}</div>
+            <div class="ap1-cot-box">{cot_html}</div>
             """)
 
         st.markdown("<hr style='border: none; border-top: 1px solid #E2E8F0; margin: 2rem 0;'/>", unsafe_allow_html=True)
@@ -1220,17 +1203,17 @@ with tab_predict:
                         <div style="text-align: right;">
                             <div class="ap1-imp-prob-val">{prob_pct:.1f}%</div>
                             <div class="ap1-imp-prob-sub">
-                                Heuristic: {(float(imp.get('probabilityHeuristic', imp.get('probability', 0.0)))*100):.1f}% | Boltzmann: {(float(imp.get('probabilityBoltzmann', imp.get('probability', 0.0)))*100):.1f}%
+                                Heuristic: {(imp['probabilityHeuristic']*100):.1f}% | Boltzmann: {(imp['probabilityBoltzmann']*100):.1f}%
                             </div>
                             <div style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #64748B; margin-top: 0.25rem;">
-                                Delta G: {float(imp.get('deltaG', imp.get('relativeEnergy', 0.0))):.2f} kcal/mol
+                                Delta G: {imp['deltaG']:.2f} kcal/mol
                             </div>
                         </div>
                     </div>
 
                     <div class="ap1-mech-box">
                         <div class="ap1-mech-title">Chemical Mechanism:</div>
-                        <div>{imp.get('mechanismExplanation', '')}</div>
+                        <div>{imp['mechanismExplanation']}</div>
                     </div>
 
                     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
@@ -1351,4 +1334,3 @@ with tab_logbook:
             type="primary"
         )
         st.dataframe(df_log, use_container_width=True, height=500)
-
