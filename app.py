@@ -968,27 +968,8 @@ with tab_predict:
                     safe_rerun()
 
         with col_input2:
-            st.markdown("<div style='font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;'>Prediction Engine & Methodology</div>", unsafe_allow_html=True)
-            method_choice = st.radio(
-                "Select Prediction Framework",
-                [
-                    "Dual Engine (Heuristic Kinetic Rules + Boltzmann Thermodynamic Delta G)",
-                    "Heuristic (Expert Kinetic Activation & Transition States)",
-                    "Boltzmann (Thermodynamic Free Energy Delta G Distribution at 298.15K)"
-                ],
-                index=0,
-                label_visibility="collapsed"
-            )
-
-            # Map choice to short method key
-            if "Heuristic" in method_choice and "Boltzmann" not in method_choice:
-                method_key = "Heuristic"
-            elif "Boltzmann" in method_choice and "Heuristic" not in method_choice:
-                method_key = "Boltzmann"
-            else:
-                method_key = "Both"
-
-            st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+            method_key = "Both"
+            st.markdown("<div style='height: 1.8rem;'></div>", unsafe_allow_html=True)
             predict_btn = st.button("Predict Chemical Interactions", type="primary", use_container_width=True)
 
     # Perform Analysis on Click

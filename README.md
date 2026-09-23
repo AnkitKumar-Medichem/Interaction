@@ -33,7 +33,6 @@ Streamlit Cloud will automatically detect:
 
 ### Prerequisites
 - Python 3.10+
-- A Google Gemini API Key ([Get one from Google AI Studio](https://aistudio.google.com/))
 
 ### Steps:
 1. **Clone the repository:**
@@ -53,14 +52,7 @@ Streamlit Cloud will automatically detect:
    pip install -r requirements.txt
    ```
 
-4. **Set your environment variable:**
-   ```bash
-   export GEMINI_API_KEY="your_gemini_api_key_here"
-   # On Windows Command Prompt: set GEMINI_API_KEY=your_gemini_api_key_here
-   # On Windows PowerShell: $env:GEMINI_API_KEY="your_gemini_api_key_here"
-   ```
-
-5. **Launch the Streamlit app:**
+4. **Launch the Streamlit app:**
    ```bash
    streamlit run app.py
    ```
@@ -71,10 +63,7 @@ Streamlit Cloud will automatically detect:
 ## 🧪 Key Capabilities in the Streamlit App
 
 - **Reaction Presets**: Instant one-click loading of benchmark chemical reaction mixtures (e.g. *Aspirin + Magnesium Stearate*, *Metformin + Lactose*).
-- **Dual Analytical Framework**:
-  - **Heuristic Kinetics**: Evaluates reactive site vulnerability and reaction kinetics.
-  - **Boltzmann Thermodynamics**: Evaluates relative formation energy $\Delta G$ (kcal/mol) at $298.15\text{ K}$.
-  - **Both**: Comparative dual perspective with ranking and distribution charts.
+- **Chemical Interaction & Degradation Analysis**: Evaluates reactive site vulnerability, transition-state activation, and Boltzmann thermodynamic free energy $\Delta G$ (kcal/mol) at $298.15\text{ K}$.
 - **2D Chemical Structure Rendering**: Native RDKit vector SVG generation for all input compounds and predicted transformation products.
 - **Physicochemical Properties**: Real-time calculation of Molecular Weight, LogP, TPSA, Rotatable Bonds, and Hydrogen Bond Donors/Acceptors.
 - **Excel & JSON Export**: Download complete multi-tab `.xlsx` reaction reports (Executive Summary, Starting Materials, Reaction Products Profile) and raw JSON.
@@ -89,10 +78,9 @@ If you wish to run the Node.js/React frontend locally:
    ```bash
    npm install
    ```
-2. Set your `GEMINI_API_KEY` in `.env.local` or `.env`.
-3. Run development server:
+2. Run development server:
    ```bash
    npm run dev
    ```
-4. Open `http://localhost:3000`.
+3. Open `http://localhost:3000`.
 
