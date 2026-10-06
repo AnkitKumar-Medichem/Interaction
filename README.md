@@ -2,7 +2,7 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# INTERACTION: AI-Powered Chemical Interaction & Reaction Product Predictor
+# INTERACTION: Chemical Interaction & Reaction Product Predictor
 
 INTERACTION predicts chemical cross-interactions, reactivity, and degradation pathways (Oxidation, Acidic Hydrolysis, Basic Hydrolysis, Photolysis, and Thermolysis) between chemical compounds. It evaluates reaction pathways using both **Heuristic Kinetic Logic** and **Boltzmann Thermodynamic Distribution ($\Delta G$ at 298.15 K)**.
 
